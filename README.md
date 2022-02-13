@@ -4,7 +4,7 @@ This repository provides an implementation in Julia of two recent methods for ge
 - the [vector forward mode of automatic differentiation (AD)][1] for composite functions, and
 - the [compass difference rule][2] for bivariate scalar-valued functions.
 
-These methods apply to continuous functions that are a finite composition of simple "scientific calculator" operations, but may be nonsmooth. Operator overloading is used to automatically apply generalized differentiation rules to each of these simple operations. This implementation doesn't depend on any packages external to Julia.
+These methods apply to continuous functions that are finite compositions of simple "scientific calculator" operations, but may be nonsmooth. Operator overloading is used to automatically apply generalized differentiation rules to each of these simple operations. This implementation doesn't depend on any packages external to Julia.
 
 ## Method overview
 to be written

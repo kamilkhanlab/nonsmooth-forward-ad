@@ -1,17 +1,23 @@
 #=
 module NonsmoothFwdAD
 =====================
-A quick implementation of the vector forward mode of automatic differentiation (AD) for generalized derivative evaluation, developed in the article:
+A quick implementation of the vector forward mode of automatic differentiation (AD) 
+for generalized derivative evaluation, developed in the article:
 
 - KA Khan and PI Barton (2015), https://doi.org/10.1080/10556788.2015.1025400
 
-This implementation applies generalized differentiation rules via operator overloading, and is modeled on the standard "smooth" vector forward AD mode implementation described in Chapter 6 of "Evaluating Derivatives (2nd ed.)" by Griewank and Walther (2008). The "LFloat" struct here is analogous to Griewank and Walther's "adouble" class. 
+This implementation applies generalized differentiation rules via operator overloading, 
+and is modeled on the standard "smooth" vector forward AD mode implementation described 
+in Chapter 6 of "Evaluating Derivatives (2nd ed.)" by Griewank and Walther (2008). 
+The "LFloat" struct here is analogous to Griewank and Walther's "adouble" class. 
 
 The following operators have been overloaded:
 x+y, -x, x-y, x*y, inv(x), x/y, x^p, exp, log, sin, cos, abs, max, min, hypot
 (where "p" is a fixed integer)
 
-Additional operators may be overloaded in the same way; a new unary operation would be overloaded just like "log" or "abs", and a new binary operation would be overloaded just like "x*y" or "hypot".
+Additional operators may be overloaded in the same way; a new unary operation would be 
+overloaded just like "log" or "abs", and a new binary operation would be overloaded 
+just like "x*y" or "hypot".
 
 Written by Kamil Khan on February 5, 2022
 =#
@@ -50,7 +56,9 @@ Base.promote(uA::LFloat, uB::Float64) = (uA, LFloat(uB, length(uA.dot), uA.ztol)
 Base.promote(uA::Float64, uB::LFloat) = reverse(promote(uB, uA))
 Base.promote(uA::LFloat, uB::LFloat) = (uA, uB)
 
-## define high-level generalized differentiation operations, given a mathematical function f composed from supported elemental operations, and written as though its input is a Vector
+## define high-level generalized differentiation operations, given a mathematical 
+## function f composed from supported elemental operations, and written as though 
+## its input is a Vector
 
 # compute:
 #  y = the function value f(x), as a Vector, and

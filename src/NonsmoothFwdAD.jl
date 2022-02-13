@@ -56,8 +56,8 @@ Base.promote(uA::LFloat, uB::Float64) = (uA, LFloat(uB, length(uA.dot), uA.ztol)
 Base.promote(uA::Float64, uB::LFloat) = reverse(promote(uB, uA))
 Base.promote(uA::LFloat, uB::LFloat) = (uA, uB)
 
-## define high-level generalized differentiation operations, given a mathematical 
-## function f composed from supported elemental operations, and written as though 
+## define high-level generalized differentiation operations, given a mathematical
+## function f composed from supported elemental operations, and written as though
 ## its input is a Vector
 
 # compute:
@@ -150,7 +150,7 @@ function eval_gen_gradient(
     yLD = eval_LFloat_vec_output(f, x, xDot)
 
     # compute generalized gradient element
-    return yLD.val, (yLD.dot' / xDot)'
+    return yLD[1].val, (yLD[1].dot' / xDot)'
 end
 
 # for a scalar-valued function f, compute:
@@ -296,5 +296,19 @@ function Base.hypot(uA::LFloat, uB::LFloat)
     return LFloat(vVal, vDot, uA.ztol)
 end
 @define_mixed_input_variants hypot
+
+## overload comparisons to permit simple if-statements, but these conditions' values
+## should not change under small perturbations in inputs.
+Base.:<(uA::LFloat, uB::LFloat) = (uA.val < uB.val)
+@define_mixed_input_variants <
+
+Base.:>(uA::LFloat, uB::LFloat) = (uA.val > uB.val)
+@define_mixed_input_variants >
+
+Base.:>=(uA::LFloat, uB::LFloat) = (uA.val >= uB.val)
+@define_mixed_input_variants >=
+
+Base.:<=(uA::LFloat, uB::LFloat) = (uA.val <= uB.val)
+@define_mixed_input_variants <=
 
 end # module

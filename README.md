@@ -1,5 +1,5 @@
-# Nonsmooth vector forward AD
-This repository provides an implementation in Julia of two recent methods for generalized derivative evaluation from our research group:
+# nonsmooth-forward-ad
+The `NonsmoothFwdAD` module in [NonsmoothFwdAD.jl](src/NonsmoothFwdAD.jl) provides an implementation in Julia of two recent methods for generalized derivative evaluation:
 
 - the [vector forward mode of automatic differentiation (AD)][1] for composite functions, and
 - the [compass difference rule][2] for bivariate scalar-valued functions.
@@ -10,7 +10,7 @@ These methods apply to continuous functions that are finite compositions of simp
 to be written
 
 ## Usage
-to be written
+The script [test.jl](test/test.jl) illustrates the usage of `NonsmoothFwdAD`, and evaluates generalized derivatives for several nonsmooth functions.
 
 ## References
 - KA Khan and PI Barton, [A vector forward mode of automatic differentiation for generalized derivative evaluation][1], *Optimization Methods and Software*, 30(6):1185-1212, 2015. DOI:10.1080/10556788.2015.1025400

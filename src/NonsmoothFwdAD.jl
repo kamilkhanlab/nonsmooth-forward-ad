@@ -1,15 +1,20 @@
 #=
 module NonsmoothFwdAD
 =====================
-A quick implementation of the vector forward mode of automatic differentiation (AD) 
-for generalized derivative evaluation, developed in the article:
+A quick implementation of: 
 
-- KA Khan and PI Barton (2015), https://doi.org/10.1080/10556788.2015.1025400
+- the vector forward mode of automatic differentiation (AD) for generalized 
+  derivative evaluation, developed in the article:
+  KA Khan and PI Barton (2015), https://doi.org/10.1080/10556788.2015.1025400
+
+- the "compass difference" rule for generalized derivatives of scalar-valued bivariate
+  functions, developed in the article:
+  KA Khan and Y Yuan (2020), https://doi.org/10.46298/jnsao-2020-6061
 
 This implementation applies generalized differentiation rules via operator overloading, 
 and is modeled on the standard "smooth" vector forward AD mode implementation described 
 in Chapter 6 of "Evaluating Derivatives (2nd ed.)" by Griewank and Walther (2008). 
-The "LFloat" struct here is analogous to Griewank and Walther's "adouble" class. 
+The "AFloat" struct here is analogous to Griewank and Walther's "adouble" class. 
 
 The following operators have been overloaded:
 x+y, -x, x-y, x*y, inv(x), x/y, x^p, exp, log, sin, cos, abs, max, min, hypot
@@ -25,7 +30,7 @@ module NonsmoothFwdAD
 
 using LinearAlgebra
 
-export LFloat
+export AFloat
 
 export eval_ld_derivative,
     eval_dir_derivative,
@@ -36,25 +41,25 @@ export eval_ld_derivative,
 # default tolerances; feel free to change.
 const DEFAULT_ZTOL = 1e-8   # used to decide if we're at the kink of "abs" or "hypot"
 
-struct LFloat
+struct AFloat
     val::Float64
     dot::Vector{Float64}
     ztol::Float64  # used in "abs" and "hypot" to decide if quantities are 0
 end
 
 # outer constructors for when this.dot and/or this.ztol aren't provided explicitly
-LFloat(val::Float64, dot::Vector{Float64}) = LFloat(val, dot, DEFAULT_ZTOL)
-LFloat(val::Float64, n::Int, ztol::Float64 = DEFAULT_ZTOL) = LFloat(val, zeros(n), ztol)
+AFloat(val::Float64, dot::Vector{Float64}) = AFloat(val, dot, DEFAULT_ZTOL)
+AFloat(val::Float64, n::Int, ztol::Float64 = DEFAULT_ZTOL) = AFloat(val, zeros(n), ztol)
 
 # display e.g. with "println"
-Base.show(io::IO, x::LFloat) = print(io, "(", x.val, "; ", x.dot, ")") 
+Base.show(io::IO, x::AFloat) = print(io, "(", x.val, "; ", x.dot, ")") 
 
-# define promotion from Float64 to LFloat.
+# define promotion from Float64 to AFloat.
 # Base.convert can't be used, because it doesn't know the intended dimension
 # of the new "dot" vector.
-Base.promote(uA::LFloat, uB::Float64) = (uA, LFloat(uB, length(uA.dot), uA.ztol))
-Base.promote(uA::Float64, uB::LFloat) = reverse(promote(uB, uA))
-Base.promote(uA::LFloat, uB::LFloat) = (uA, uB)
+Base.promote(uA::AFloat, uB::Float64) = (uA, AFloat(uB, length(uA.dot), uA.ztol))
+Base.promote(uA::Float64, uB::AFloat) = reverse(promote(uB, uA))
+Base.promote(uA::AFloat, uB::AFloat) = (uA, uB)
 
 ## define high-level generalized differentiation operations, given a mathematical
 ## function f composed from supported elemental operations, and written as though
@@ -64,31 +69,43 @@ Base.promote(uA::LFloat, uB::LFloat) = (uA, uB)
 #  y = the function value f(x), as a Vector, and
 #  yDot = the LD-derivative f'(x; xDot)
 #  yDot is the same type as xDot, which is either a Matrix or a Vector{Vector} 
-function eval_ld_derivative(f, x::Vector{Float64}, xDot::Matrix{Float64})
+function eval_ld_derivative(
+    f::Function,
+    x::Vector{Float64},
+    xDot::Matrix{Float64}
+)
     # use operator overloading to compute f(x) and f'(x; xDot)
-    yLD = eval_LFloat_vec_output(f, x, xDot)
+    yLD = eval_AFloat_vec_output(f, x, xDot)
 
-    # recover outputs from LFloats
+    # recover outputs from AFloats
     y = [vLD.val for vLD in yLD]
     yDot = reduce(vcat, [vLD.dot for vLD in yLD]')
     
     return y, yDot
 end
 
-function eval_ld_derivative(f, x::Vector{Float64}, xDot::Vector{Vector{Float64}})
+function eval_ld_derivative(
+    f::Function,
+    x::Vector{Float64},
+    xDot::Vector{Vector{Float64}}
+)
     # use operator overloading to compute f(x) and f'(x; xDot)
-    yLD = eval_LFloat_vec_output(f, x, xDot)
+    yLD = eval_AFloat_vec_output(f, x, xDot)
 
-    # recover outputs from LFloats
+    # recover outputs from AFloats
     y = [vLD.val for vLD in yLD]
     yDot = [vLD.dot for vLD in yLD]
     
     return y, yDot
 end
 
-function eval_LFloat_vec_output(f, x::Vector{Float64}, xDot::Matrix{Float64})
-    # express inputs as LFloats            
-    xLD = [LFloat(v, Vector(vDot)) for (v, vDot) in zip(x, eachrow(xDot))]
+function eval_AFloat_vec_output(
+    f::Function,
+    x::Vector{Float64},
+    xDot::Matrix{Float64}
+)
+    # express inputs as AFloats            
+    xLD = [AFloat(v, Vector(vDot)) for (v, vDot) in zip(x, eachrow(xDot))]
 
     # use operator overloading to compute f(x) and f'(x; xDot)
     yLD = f(xLD)
@@ -99,9 +116,13 @@ function eval_LFloat_vec_output(f, x::Vector{Float64}, xDot::Matrix{Float64})
     return yLD
 end
 
-function eval_LFloat_vec_output(f, x::Vector{Float64}, xDot::Vector{Vector{Float64}})
-    # express inputs as LFloats
-    xLD = map(LFloat, x, xDot)
+function eval_AFloat_vec_output(
+    f::Function,
+    x::Vector{Float64},
+    xDot::Vector{Vector{Float64}}
+)
+    # express inputs as AFloats
+    xLD = map(AFloat, x, xDot)
 
     # use operator overloading to compute f(x) and f'(x; xDot)
     yLD = f(xLD)
@@ -115,7 +136,11 @@ end
 # compute:
 #   y = the function value f(x), as a vector, and
 #   yDot = the directional derivative f'(x; xDot::Vector), as a vector
-function eval_dir_derivative(f, x::Vector{Float64}, xDot::Vector{Float64})
+function eval_dir_derivative(
+    f::Function,
+    x::Vector{Float64},
+    xDot::Vector{Float64}
+)
     xDotMatrix = reshape(xDot, :, 1)
     (y, yDotMatrix) = eval_ld_derivative(f, x, xDotMatrix)
     yDot = vec(yDotMatrix)
@@ -127,7 +152,7 @@ end
 #   yDeriv = the lexicographic derivative D_L f(x; xDot)
 #   (xDot defaults to I if not provided)
 function eval_gen_derivative(
-    f,
+    f::Function,
     x::Vector{Float64},
     xDot::Matrix{Float64} = Matrix{Float64}(I(length(x)))
 )
@@ -142,12 +167,12 @@ end
 #           which is a vector (and the transpose of the lex. derivative)
 #   (xDot defaults to I if not provided)
 function eval_gen_gradient(
-    f,
+    f::Function,
     x::Vector{Float64},
     xDot::Matrix{Float64} = Matrix{Float64}(I(length(x)))
 )
     # use operator overloading to compute f(x) and f'(x; xDot)
-    yLD = eval_LFloat_vec_output(f, x, xDot)
+    yLD = eval_AFloat_vec_output(f, x, xDot)
 
     # compute generalized gradient element
     return yLD[1].val, (yLD[1].dot' / xDot)'
@@ -157,14 +182,16 @@ end
 #   y = the function value f(x), and
 #   yCompass = the compass difference of f at x.
 # x must be either a scalar or vector, and yCompass is the same type as x.
-function eval_compass_difference(f, x::Vector{Float64})
+function eval_compass_difference(f::Function, x::Vector{Float64})
     y = f(x)
     if y isa Float64
         fVec(u) = [f(u)]
     else
         fVec(u) = f(u)
     end
-    (length(y) == 1) || throw(DomainError("f; this function is not scalar-valued"))
+    (length(y) == 1) ||
+        throw(DomainError("f; this function is not scalar-valued"))
+    
     yCompass = copy(x)
     coordVec = zeros(length(x))
     for i in eachindex(x)
@@ -177,78 +204,78 @@ function eval_compass_difference(f, x::Vector{Float64})
     return y, yCompass
 end
 
-function eval_compass_difference(f, x::Float64)
+function eval_compass_difference(f::Function, x::Float64)
     (y, yCompassVec) = eval_compass_difference(f, [x])
     return y, yCompassVec[1]
 end
 
 ## define generalized differentiation rules for the simplest elemental operations
 
-# macro to define (::LFloat, ::Float64) and (::Float64, ::LFloat) variants
-# of a defined bivariate operation(::LFloat, ::LFloat).
+# macro to define (::AFloat, ::Float64) and (::Float64, ::AFloat) variants
+# of a defined bivariate operation(::AFloat, ::AFloat).
 macro define_mixed_input_variants(op)
     return quote
-        Base.$op(uA::LFloat, uB::Float64) = $op(promote(uA, uB)...)
-        Base.$op(uA::Float64, uB::LFloat) = $op(promote(uA, uB)...)
+        Base.$op(uA::AFloat, uB::Float64) = $op(promote(uA, uB)...)
+        Base.$op(uA::Float64, uB::AFloat) = $op(promote(uA, uB)...)
     end
 end
 
 # addition
-function Base.:+(uA::LFloat, uB::LFloat)
+function Base.:+(uA::AFloat, uB::AFloat)
     vVal = uA.val + uB.val
     vDot = uA.dot + uB.dot
-    return LFloat(vVal, vDot, uA.ztol)
+    return AFloat(vVal, vDot, uA.ztol)
 end
 @define_mixed_input_variants +
 
 # negative and subtraction
-Base.:-(u::LFloat) = LFloat(-u.val, -u.dot, u.ztol)
+Base.:-(u::AFloat) = AFloat(-u.val, -u.dot, u.ztol)
 
-Base.:-(uA::LFloat, uB::LFloat) = uA + (-uB)
+Base.:-(uA::AFloat, uB::AFloat) = uA + (-uB)
 @define_mixed_input_variants -
 
 # multiplication
-function Base.:*(uA::LFloat, uB::LFloat)
+function Base.:*(uA::AFloat, uB::AFloat)
     vVal = uA.val * uB.val
     vDot = (uB.val * uA.dot) + (uA.val * uB.dot)
-    return LFloat(vVal, vDot, uA.ztol)
+    return AFloat(vVal, vDot, uA.ztol)
 end
 @define_mixed_input_variants *
 
 # reciprocal and division
-function Base.inv(u::LFloat)
+function Base.inv(u::AFloat)
     vVal = inv(u.val)
     vDot = -u.dot / ((u.val)^2)
-    return LFloat(vVal, vDot, u.ztol)
+    return AFloat(vVal, vDot, u.ztol)
 end
 
-Base.:/(uA::LFloat, uB::LFloat) = uA * inv(uB)
+Base.:/(uA::AFloat, uB::AFloat) = uA * inv(uB)
 @define_mixed_input_variants /
 
 # integer powers
-function Base.:^(u::LFloat, p::Int)
+function Base.:^(u::AFloat, p::Int)
     if p == 0
         return 0.0*u + 1.0
     else
         vVal = (u.val)^p
         vDot = p * (u.val)^(p-1) * u.dot
-        return LFloat(vVal, vDot, u.ztol)
+        return AFloat(vVal, vDot, u.ztol)
     end
 end
 
 # exponential, logarithm, sine, and cosine
-Base.exp(u::LFloat) = LFloat(exp(u.val), exp(u.val) * u.dot, u.ztol)
+Base.exp(u::AFloat) = AFloat(exp(u.val), exp(u.val) * u.dot, u.ztol)
 
-Base.log(u::LFloat) = LFloat(log(u.val), u.dot / u.val, u.ztol)
+Base.log(u::AFloat) = AFloat(log(u.val), u.dot / u.val, u.ztol)
 
-Base.sin(u::LFloat) = LFloat(sin(u.val), cos(u.val) * u.dot, u.ztol)
+Base.sin(u::AFloat) = AFloat(sin(u.val), cos(u.val) * u.dot, u.ztol)
 
-Base.cos(u::LFloat) = LFloat(cos(u.val), -sin(u.val) * u.dot, u.ztol)
+Base.cos(u::AFloat) = AFloat(cos(u.val), -sin(u.val) * u.dot, u.ztol)
 
 # absolute value.
 # When evaluating zDot, if any quantity "q" has abs(q) < u.ztol,
 # then "q" is considered to be 0.
-function Base.abs(u::LFloat)
+function Base.abs(u::AFloat)
     vVal = abs(u.val)
     if vVal > u.ztol
         s = sign(u.val)
@@ -262,20 +289,20 @@ function Base.abs(u::LFloat)
         end
     end
     vDot = s * u.dot
-    return LFloat(vVal, vDot, u.ztol)
+    return AFloat(vVal, vDot, u.ztol)
 end
 
 # bivariate max and min.
 # Uses the identity max(uA,uB) = 0.5*(uA+uB+abs(uA-uB)), and similarly for min
-Base.max(uA::LFloat, uB::LFloat) = 0.5*(uA + uB + abs(uA - uB))
+Base.max(uA::AFloat, uB::AFloat) = 0.5*(uA + uB + abs(uA - uB))
 @define_mixed_input_variants max
 
-Base.min(uA::LFloat, uB::LFloat) = 0.5*(uA + uB - abs(uA - uB))
+Base.min(uA::AFloat, uB::AFloat) = 0.5*(uA + uB - abs(uA - uB))
 @define_mixed_input_variants min
 
 # sqrt(uA^2 + uB^2); this is LinearAlgebra.hypot in Julia.
-# uA.ztol is used as in abs(::LFloat)
-function Base.hypot(uA::LFloat, uB::LFloat)
+# uA.ztol is used as in abs(::AFloat)
+function Base.hypot(uA::AFloat, uB::AFloat)
     vVal = hypot(uA.val, uB.val)
     if vVal > uA.ztol
         sA = uA.val / vVal
@@ -293,22 +320,22 @@ function Base.hypot(uA::LFloat, uB::LFloat)
         end
     end
     vDot = sA * uA.dot + sB * uB.dot
-    return LFloat(vVal, vDot, uA.ztol)
+    return AFloat(vVal, vDot, uA.ztol)
 end
 @define_mixed_input_variants hypot
 
 ## overload comparisons to permit simple if-statements, but these conditions' values
 ## should not change under small perturbations in inputs.
-Base.:<(uA::LFloat, uB::LFloat) = (uA.val < uB.val)
+Base.:<(uA::AFloat, uB::AFloat) = (uA.val < uB.val)
 @define_mixed_input_variants <
 
-Base.:>(uA::LFloat, uB::LFloat) = (uA.val > uB.val)
+Base.:>(uA::AFloat, uB::AFloat) = (uA.val > uB.val)
 @define_mixed_input_variants >
 
-Base.:>=(uA::LFloat, uB::LFloat) = (uA.val >= uB.val)
+Base.:>=(uA::AFloat, uB::AFloat) = (uA.val >= uB.val)
 @define_mixed_input_variants >=
 
-Base.:<=(uA::LFloat, uB::LFloat) = (uA.val <= uB.val)
+Base.:<=(uA::AFloat, uB::AFloat) = (uA.val <= uB.val)
 @define_mixed_input_variants <=
 
 end # module

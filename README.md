@@ -6,6 +6,37 @@ The `NonsmoothFwdAD` module in [NonsmoothFwdAD.jl](src/NonsmoothFwdAD.jl) provid
 
 These methods apply to continuous functions that are finite compositions of simple "scientific calculator" operations, but may be nonsmooth. Operator overloading is used to automatically apply generalized differentiation rules to each of these simple operations. This implementation doesn't depend on any packages external to Julia.
 
+## Example
+
+The script [test.jl](test/test.jl) applies `NonsmoothFwdAD` to several examples for illustration; here is one of them. Further implementation details are provided [below](#implementation-overview).
+
+Consider the following nonsmooth function of two variables, to replicate Example 6.2 from Khan and Barton (2013):
+```julia
+f(x) = max(min(x[1], -x[2]), x[2] - x[1])
+```
+Using the `NonsmoothFwdAD` module (after `include("NonsmoothFwdAD.jl")` and `using .NonsmoothFwdAD`), we may evaluate a value `y` and a generalized gradient element `yGrad` of `f` at `[0.0, 0.0]` by the following alternative approaches, using the nonsmooth vector forward mode of AD.
+
+- By defining `f` beforehand:
+	```julia
+	f(x) = max(min(x[1], -x[2]), x[2] - x[1])
+	y, yGrad = eval_gen_gradient(f, [0.0, 0.0])
+	```
+- By defining `f` as an anonymous function:
+	```julia
+	y, yGrad = eval_gen_gradient([0.0, 0.0]) do
+	    return max(min(x[1], -x[2]), x[2] - x[1])
+	end	
+	```
+
+Here, `eval_gen_gradient` constructs `yGrad` as a `Vector{Float64}`, and only applies to scalar-valued functions. For vector-valued functions, `eval_gen_derivative` instead produces a generalized derivative element `yDeriv::Matrix{Float64}`.
+
+For scalar-valued functions of one or two variables, the "compass difference" is guaranteed to be an element of Clarke's generalized gradient. We may calculate the compass difference `yCompass::Vector{Float64}` for the above function `f` at `[0.0, 0.0]` as follows:
+```julia
+_, yCompass = eval_compass_difference([0.0, 0.0]) do
+    return max(min(x[1], -x[2]), x[2] - x[1])
+end	
+```
+
 ## Method overview
 The standard vector forward mode of automatic differentiation (AD) evaluates derivative-matrix products efficiently for composite smooth functions, and is described by Griewank and Walther (2008). For a composite smooth function **f** of *n* variables, and with derivative **Df**, the vector forward AD mode takes a domain vector **x** and a matrix **M** as input, and produces the product **Df(x) M** as output. To do this, the method regards **f** as a composition of simple elemental functions (such as the arithmetic operations `+`/`-`/`*`/`/` and trigonometric functions), and handles each elemental function using the standard chain rule for differentiation.
 

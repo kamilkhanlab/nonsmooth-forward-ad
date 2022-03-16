@@ -24,7 +24,7 @@ The script [test.jl](test/test.jl) illustrates the usage of `NonsmoothFwdAD`, an
 The differentiation methods of this module apply to compositions of these operations. Additional univariate operations may be included by adapting the handling of `log` or `abs`, and additional bivariate operations may be included by adapting the handling of `*` or `hypot`. The overloaded `^` operation only supports integer-valued exponents; rewrite non-integer exponents as e.g. `x^y = exp(y*log(x))`.
 
 ### Exported functions
-The following functions are exported by `NonsmoothFwdAD`. Except where noted, the provided function `f` must be composed from the above operations, and must be written so that its input and output are both generic `Vector{T}`s, with `T` standing in for `Float64`.
+The following functions are exported by `NonsmoothFwdAD`. Except where noted, the provided function `f` must be composed from the above operations, and must be written so that its input and output are both generic `Vector{T}`s, with `T` standing in for `Float64`. In each case, `f` may be provided as an anonymous function using Julia's `do` syntax.
 
 - `(y, yDot) = eval_dir_derivative(f::Function, x::Vector{Float64}, xDot::Vector{Float64})`:
 
@@ -42,7 +42,7 @@ The following functions are exported by `NonsmoothFwdAD`. Except where noted, th
 
 	- evaluates `y = f(x)` and the LD-derivative `yDot = f'(x; xDot)`, analogous to the output `Df(x)*xDot` of the smooth vector forward AD mode. `xDot` may be either a `Matrix{Float64}` or a `Vector{Vector{Float64}}`, and the output `yDot` is constructed to be the same type as `xDot`. This is used in methods that require LD-derivatives, such as when computing generalized derivatives for ODE solutions according to Khan and Barton (2014).
 	
-- `(y, yCompass) = eval_compass_diff(f::Function, x::Vector{Float64})`:	
+- `(y, yCompass) = eval_compass_difference(f::Function, x::Vector{Float64})`:	
 
 	- evaluates `y = f(x)` and the compass difference `yCompass` of a scalar-valued function `f` at `x`. If `f` has a domain dimension of 1 or 2, then `yCompass` is guaranteed to be an element of Clarke's generalized gradient.
 	

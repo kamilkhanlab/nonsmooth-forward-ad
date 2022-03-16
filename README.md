@@ -64,7 +64,7 @@ The nonsmooth calculus rules used here are described by Khan and Barton (2015) a
 - PI Barton, KA Khan, P Stechlinski, and HAJ Watson, [Computationally relevant generalized derivatives: theory, evaluation, and applications][3], *Optimization Methods and Software*, 33:1030-1072, 2017. DOI:10.1080/10556788.2017.1374385
 - A Griewank, Automatic directional differentiation of nonsmooth composite functions, French-German Conference on Optimization, Dijon, 1994.
 - A Griewank and A Walther, Evaluating Derivatives: Principles and Techniques of Algorithmic Differentiation (2nd ed.), SIAM, 2008.
-- Y Nesterov, Lexicographic differentiation of nonsmoooth functions, *Mathematical Programming*, 104:669-700, 2005.
+- Y Nesterov, Lexicographic differentiation of nonsmooth functions, *Mathematical Programming*, 104:669-700, 2005.
 
 
 [1]: https://doi.org/10.1080/10556788.2015.1025400

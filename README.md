@@ -23,7 +23,7 @@ Using the `NonsmoothFwdAD` module (after `include("NonsmoothFwdAD.jl")` and `usi
 	```
 - By defining `f` as an anonymous function:
 	```julia
-	y, yGrad = eval_gen_gradient([0.0, 0.0]) do
+	y, yGrad = eval_gen_gradient([0.0, 0.0]) do x
 	    return max(min(x[1], -x[2]), x[2] - x[1])
 	end	
 	```
@@ -32,7 +32,7 @@ Here, `eval_gen_gradient` constructs `yGrad` as a `Vector{Float64}`, and only ap
 
 For scalar-valued functions of one or two variables, the "compass difference" is guaranteed to be an element of Clarke's generalized gradient. We may calculate the compass difference `yCompass::Vector{Float64}` for the above function `f` at `[0.0, 0.0]` as follows:
 ```julia
-_, yCompass = eval_compass_difference([0.0, 0.0]) do
+_, yCompass = eval_compass_difference([0.0, 0.0]) do x
     return max(min(x[1], -x[2]), x[2] - x[1])
 end	
 ```

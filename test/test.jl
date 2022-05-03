@@ -11,6 +11,7 @@ include("../src/NonsmoothFwdAD.jl")
 
 using .NonsmoothFwdAD
 
+
 println("Replicating Example 6.1 from [1]:")
 
 _, f1Grad = eval_gen_gradient(x -> abs(x[1]) - abs(x[1]), [0.0])
@@ -22,6 +23,7 @@ _, g1Grad = eval_gen_gradient(x -> max(x[1], 0.0) - min(x[1], 0.0), [0.0])
 println("  Gen. gradient element ",
         "of (x -> max(x, 0.0) - min(x, 0.0)) at 0.0:")
 println("    ", g1Grad)
+
 
 println("\nReplicating Example 6.2 from [1]:")
 
@@ -39,6 +41,7 @@ println("  Compass difference ",
         "at [0.0, 0.0]:")
 println("    ", f2Compass)
 
+
 println("\nReplicating Example 6.3 from [1]:")
 
 _, f3Grad = eval_gen_gradient([0.0, 0.0]) do x
@@ -47,6 +50,7 @@ end
 println("  Gen. gradient element ",
         "of (x -> (1.0 + abs(x[1] - x[2]))*(x[1] - x[2])) at [0.0, 0.0]:")
 println("    ", f3Grad)
+
 
 println("\nReplicating Example 6.5 from [1]:")
 

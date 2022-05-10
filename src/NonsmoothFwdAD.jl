@@ -61,6 +61,11 @@ Base.promote(uA::AFloat, uB::Float64) = (uA, AFloat(uB, length(uA.dot), uA.ztol)
 Base.promote(uA::Float64, uB::AFloat) = reverse(promote(uB, uA))
 Base.promote(uA::AFloat, uB::AFloat) = (uA, uB)
 
+# for u::AFloat, define "u[1]" to mean "u". Helps handle vector/scalar outputs.
+function Base.getindex(u::AFloat, i::Int)
+    return (i == 1) ? u : throw(DomainError("i: must be 1"))
+end
+
 ## define high-level generalized differentiation operations, given a mathematical
 ## function f composed from supported elemental operations, and written as though
 ## its input is a Vector
@@ -184,13 +189,11 @@ end
 # x must be either a scalar or vector, and yCompass is the same type as x.
 function eval_compass_difference(f::Function, x::Vector{Float64})
     y = f(x)
-    if y isa Float64
-        fVec(u) = [f(u)]
-    else
-        fVec(u) = f(u)
-    end
+    
     (length(y) == 1) ||
         throw(DomainError("f; this function is not scalar-valued"))
+
+    fVec(u) = [f(u)[1]] # account for f returning either a Float64 or Vector{Float64}
     
     yCompass = copy(x)
     coordVec = zeros(length(x))

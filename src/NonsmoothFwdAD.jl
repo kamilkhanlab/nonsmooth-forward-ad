@@ -165,12 +165,22 @@ end
 function eval_gen_derivative(
     f::Function,
     x::Vector{Float64},
-    xDot::Matrix{Float64} = Matrix{Float64}(I(length(x)));
+    xDot::Matrix{Float64};
     ztol::Float64 = DEFAULT_ZTOL
 )
     (y, yDot) = eval_ld_derivative(f, x, xDot, ztol = ztol)
     yDeriv = yDot / xDot
     return y, yDeriv
+end
+
+# Secondary input type to speed up compile time:
+function eval_gen_derivative(
+    f::Function,
+    x::Vector{Float64};
+    ztol::Float64 = DEFAULT_ZTOL
+)
+    (y, yDot) = eval_ld_derivative(f, x, Matrix{Float64}(I(length(x))), ztol = ztol)
+    return y, yDot
 end
 
 # for scalar-valued f (ordinarily returning a Float64), compute:
@@ -181,14 +191,26 @@ end
 function eval_gen_gradient(
     f::Function,
     x::Vector{Float64},
-    xDot::Matrix{Float64} = Matrix{Float64}(I(length(x)));
+    xDot::Matrix{Float64};
     ztol::Float64 = DEFAULT_ZTOL
 )
     # use operator overloading to compute f(x) and f'(x; xDot)
     yLD = eval_AFloat_vec_output(f, x, xDot, ztol = ztol)
 
     # compute generalized gradient element
-    return yLD[1].val, (yLD[1].dot' / xDot)'
+    return yLD[1].val, (yLD[1].dot'/ xDot)'
+end
+
+# Secondary input type to speed up compile time:
+function eval_gen_gradient(
+    f::Function,
+    x::Vector{Float64};
+    ztol::Float64 = DEFAULT_ZTOL
+)
+    # use operator overloading to compute f(x) and f'(x; xDot)
+    yLD = eval_AFloat_vec_output(f, x, Matrix{Float64}(I(length(x))), ztol = ztol)
+
+    return yLD[1].val, yLD[1].dot
 end
 
 # for a scalar-valued function f, compute:

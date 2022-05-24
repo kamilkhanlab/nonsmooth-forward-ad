@@ -76,6 +76,8 @@ The following functions are exported by `NonsmoothFwdAD`. Except where noted, th
 - `(y, yCompass) = eval_compass_difference(f::Function, x::Vector{Float64})`:	
 
 	- evaluates `y = f(x)` and the compass difference `yCompass` of a scalar-valued function `f` at `x`. If `f` has a domain dimension of 1 or 2, then `yCompass` is guaranteed to be an element of Clarke's generalized gradient.
+
+All exported functions have an optional key argument for `ztol` that allows for a variable value for the function tolerance to be set by the user. A default value is set to: `1e-08`. 
 	
 ### Operator overloading
 
@@ -83,11 +85,11 @@ Analogous to the `adouble` class described by Griewank and Walther (2008), this 
 
 - `val::Float64`: its output value
 - `dot::Vector{Float64}`: its output generalized derivative
-- `zTol::Float64`: the capture radius for nonsmooth operations with kinks. Any quantity within `zTol` of a kink is considered to be at that kink. Default value: `1e-08`.
+- `ztol::Float64`: the capture radius for nonsmooth operations with kinks. Any quantity within `ztol` of a kink is considered to be at that kink. Default value: `1e-08`.
 	
 ### Handling nonsmoothness
 
-The nonsmooth calculus rules used here are described by Khan and Barton (2015) and Barton et al. (2017). In particular, they require knowledge of when a nonsmooth elemental function like `abs` is exactly at its "kink" or not, which is difficult using floating point arithmetic. This implementation, by default, considers any domain point within an absolute tolerance of `1e-08` of a kink to be at that kink. The ability to change this tolerance will be added.
+The nonsmooth calculus rules used here are described by Khan and Barton (2015) and Barton et al. (2017). In particular, they require knowledge of when a nonsmooth elemental function like `abs` is exactly at its "kink" or not, which is difficult using floating point arithmetic. This implementation, by default, considers any domain point within an absolute tolerance of `1e-08` of a kink to be at that kink. The user has the ability to change this tolerance.
 
 ## References
 - KA Khan and PI Barton, [A vector forward mode of automatic differentiation for generalized derivative evaluation][1], *Optimization Methods and Software*, 30(6):1185-1212, 2015. DOI:10.1080/10556788.2015.1025400

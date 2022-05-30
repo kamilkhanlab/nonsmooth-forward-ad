@@ -1,9 +1,9 @@
 #=
 module NonsmoothFwdAD
 =====================
-A quick implementation of: 
+A quick implementation of:
 
-- the vector forward mode of automatic differentiation (AD) for generalized 
+- the vector forward mode of automatic differentiation (AD) for generalized
   derivative evaluation, developed in the article:
   KA Khan and PI Barton (2015), https://doi.org/10.1080/10556788.2015.1025400
 
@@ -11,20 +11,21 @@ A quick implementation of:
   functions, developed in the article:
   KA Khan and Y Yuan (2020), https://doi.org/10.46298/jnsao-2020-6061
 
-This implementation applies generalized differentiation rules via operator overloading, 
-and is modeled on the standard "smooth" vector forward AD mode implementation described 
-in Chapter 6 of "Evaluating Derivatives (2nd ed.)" by Griewank and Walther (2008). 
-The "AFloat" struct here is analogous to Griewank and Walther's "adouble" class. 
+This implementation applies generalized differentiation rules via operator overloading,
+and is modeled on the standard "smooth" vector forward AD mode implementation described
+in Chapter 6 of "Evaluating Derivatives (2nd ed.)" by Griewank and Walther (2008).
+The "AFloat" struct here is analogous to Griewank and Walther's "adouble" class.
 
 The following operators have been overloaded:
 x+y, -x, x-y, x*y, inv(x), x/y, x^p, exp, log, sin, cos, abs, max, min, hypot
 (where "p" is a fixed integer)
 
-Additional operators may be overloaded in the same way; a new unary operation would be 
-overloaded just like "log" or "abs", and a new binary operation would be overloaded 
+Additional operators may be overloaded in the same way; a new unary operation would be
+overloaded just like "log" or "abs", and a new binary operation would be overloaded
 just like "x*y" or "hypot".
 
 Written by Kamil Khan on February 5, 2022
+Edited by Maha Chaudhry in April 2022
 =#
 module NonsmoothFwdAD
 
@@ -52,7 +53,7 @@ AFloat(val::Float64, dot::Vector{Float64}) = AFloat(val, dot, DEFAULT_ZTOL)
 AFloat(val::Float64, n::Int, ztol::Float64 = DEFAULT_ZTOL) = AFloat(val, zeros(n), ztol)
 
 # display e.g. with "println"
-Base.show(io::IO, x::AFloat) = print(io, "(", x.val, "; ", x.dot, ")") 
+Base.show(io::IO, x::AFloat) = print(io, "(", x.val, "; ", x.dot, ")")
 
 # define promotion from Float64 to AFloat.
 # Base.convert can't be used, because it doesn't know the intended dimension
@@ -73,44 +74,47 @@ end
 # compute:
 #  y = the function value f(x), as a Vector, and
 #  yDot = the LD-derivative f'(x; xDot)
-#  yDot is the same type as xDot, which is either a Matrix or a Vector{Vector} 
+#  yDot is the same type as xDot, which is either a Matrix or a Vector{Vector}
 function eval_ld_derivative(
     f::Function,
     x::Vector{Float64},
-    xDot::Matrix{Float64}
+    xDot::Matrix{Float64};
+    ztol::Float64 = DEFAULT_ZTOL 
 )
     # use operator overloading to compute f(x) and f'(x; xDot)
-    yLD = eval_AFloat_vec_output(f, x, xDot)
+    yLD = eval_AFloat_vec_output(f, x, xDot, ztol = ztol)
 
     # recover outputs from AFloats
     y = [vLD.val for vLD in yLD]
     yDot = reduce(vcat, [vLD.dot for vLD in yLD]')
-    
+
     return y, yDot
 end
 
 function eval_ld_derivative(
     f::Function,
     x::Vector{Float64},
-    xDot::Vector{Vector{Float64}}
+    xDot::Vector{Vector{Float64}};
+    ztol::Float64 = DEFAULT_ZTOL
 )
     # use operator overloading to compute f(x) and f'(x; xDot)
-    yLD = eval_AFloat_vec_output(f, x, xDot)
+    yLD = eval_AFloat_vec_output(f, x, xDot, ztol = ztol)
 
     # recover outputs from AFloats
     y = [vLD.val for vLD in yLD]
     yDot = [vLD.dot for vLD in yLD]
-    
+
     return y, yDot
 end
 
 function eval_AFloat_vec_output(
     f::Function,
     x::Vector{Float64},
-    xDot::Matrix{Float64}
+    xDot::Matrix{Float64};
+    ztol::Float64 = DEFAULT_ZTOL
 )
-    # express inputs as AFloats            
-    xLD = [AFloat(v, Vector(vDot)) for (v, vDot) in zip(x, eachrow(xDot))]
+    # express inputs as AFloats
+    xLD = [AFloat(v, Vector(vDot), ztol) for (v, vDot) in zip(x, eachrow(xDot))]
 
     # use operator overloading to compute f(x) and f'(x; xDot)
     yLD = f(xLD)
@@ -124,10 +128,11 @@ end
 function eval_AFloat_vec_output(
     f::Function,
     x::Vector{Float64},
-    xDot::Vector{Vector{Float64}}
+    xDot::Vector{Vector{Float64}};
+    ztol::Float64 = DEFAULT_ZTOL
 )
     # express inputs as AFloats
-    xLD = map(AFloat, x, xDot)
+    xLD = map(AFloat, x, xDot, ztol)
 
     # use operator overloading to compute f(x) and f'(x; xDot)
     yLD = f(xLD)
@@ -144,10 +149,11 @@ end
 function eval_dir_derivative(
     f::Function,
     x::Vector{Float64},
-    xDot::Vector{Float64}
+    xDot::Vector{Float64};
+    ztol::Float64 = DEFAULT_ZTOL
 )
     xDotMatrix = reshape(xDot, :, 1)
-    (y, yDotMatrix) = eval_ld_derivative(f, x, xDotMatrix)
+    (y, yDotMatrix) = eval_ld_derivative(f, x, xDotMatrix, ztol = ztol)
     yDot = vec(yDotMatrix)
     return y, yDot
 end
@@ -155,60 +161,90 @@ end
 # compute:
 #   y = the function value f(x), and
 #   yDeriv = the lexicographic derivative D_L f(x; xDot)
-#   (xDot defaults to I if not provided)
+#   (xDot defaults to I if not provided, skipping the final linear solve.)
 function eval_gen_derivative(
     f::Function,
     x::Vector{Float64},
-    xDot::Matrix{Float64} = Matrix{Float64}(I(length(x)))
+    xDot::Matrix{Float64};
+    ztol::Float64 = DEFAULT_ZTOL
 )
-    (y, yDot) = eval_ld_derivative(f, x, xDot)
+    (y, yDot) = eval_ld_derivative(f, x, xDot, ztol = ztol)
     yDeriv = yDot / xDot
     return y, yDeriv
+end
+
+function eval_gen_derivative(
+    f::Function,
+    x::Vector{Float64};
+    ztol::Float64 = DEFAULT_ZTOL
+)
+    (y, yDot) = eval_ld_derivative(f, x, Matrix{Float64}(I(length(x))), ztol = ztol)
+    return y, yDot
 end
 
 # for scalar-valued f (ordinarily returning a Float64), compute:
 #   y = the function value f(x), and
 #   yGrad = the lexicographic gradient grad_L f(x; xDot),
 #           which is a vector (and the transpose of the lex. derivative)
-#   (xDot defaults to I if not provided)
+#   (xDot defaults to I if not provided, skipping the final linear solve.)
 function eval_gen_gradient(
     f::Function,
     x::Vector{Float64},
-    xDot::Matrix{Float64} = Matrix{Float64}(I(length(x)))
+    xDot::Matrix{Float64};
+    ztol::Float64 = DEFAULT_ZTOL
 )
     # use operator overloading to compute f(x) and f'(x; xDot)
-    yLD = eval_AFloat_vec_output(f, x, xDot)
+    yLD = eval_AFloat_vec_output(f, x, xDot, ztol = ztol)
 
     # compute generalized gradient element
-    return yLD[1].val, (yLD[1].dot' / xDot)'
+    return yLD[1].val, (yLD[1].dot'/ xDot)'
+end
+
+function eval_gen_gradient(
+    f::Function,
+    x::Vector{Float64};
+    ztol::Float64 = DEFAULT_ZTOL
+)
+    # use operator overloading to compute f(x) and f'(x; xDot)
+    yLD = eval_AFloat_vec_output(f, x, Matrix{Float64}(I(length(x))), ztol = ztol)
+
+    return yLD[1].val, yLD[1].dot
 end
 
 # for a scalar-valued function f, compute:
 #   y = the function value f(x), and
 #   yCompass = the compass difference of f at x.
 # x must be either a scalar or vector, and yCompass is the same type as x.
-function eval_compass_difference(f::Function, x::Vector{Float64})
+function eval_compass_difference(
+    f::Function,
+    x::Vector{Float64};
+    ztol::Float64 = DEFAULT_ZTOL
+)
     y = f(x)
-    
+
     (length(y) == 1) ||
         throw(DomainError("f; this function is not scalar-valued"))
 
     fVec(u) = [f(u)[1]] # account for f returning either a Float64 or Vector{Float64}
-    
+
     yCompass = copy(x)
     coordVec = zeros(length(x))
     for i in eachindex(x)
         coordVec[i] = 1.0
-        _, yDotPlus = eval_dir_derivative(fVec, x, coordVec)
-        _, yDotMinus = eval_dir_derivative(fVec, x, -coordVec)
+        _, yDotPlus = eval_dir_derivative(fVec, x, coordVec, ztol = ztol)
+        _, yDotMinus = eval_dir_derivative(fVec, x, -coordVec, ztol = ztol)
         yCompass[i] = 0.5*(yDotPlus[1] - yDotMinus[1])
         coordVec[i] = 0.0
     end
     return y, yCompass
 end
 
-function eval_compass_difference(f::Function, x::Float64)
-    (y, yCompassVec) = eval_compass_difference(f, [x])
+function eval_compass_difference(
+    f::Function,
+    x::Float64;
+    ztol::Float64 = DEFAULT_ZTOL
+)
+    (y, yCompassVec) = eval_compass_difference(f, [x], ztol = ztol)
     return y, yCompassVec[1]
 end
 

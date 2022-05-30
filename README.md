@@ -84,7 +84,7 @@ The following functions are exported by `NonsmoothFwdAD`. Except where noted, th
 	
 #### Handling nonsmoothness
 
-The nonsmooth calculus rules used here are described by Khan and Barton (2015) and Barton et al. (2017). In particular, they require knowledge of when a nonsmooth elemental function like `abs` is exactly at its "kink" or not, which is difficult using floating point arithmetic. This implementation, by default, considers any domain point within an absolute tolerance of `1e-08` of a kink to be at that kink. In the exported functions listed above, this "zero tolerance" may be edited via a keyword argument `ztol`. For example, in `eval_gen_gradient`, we could write:
+The nonsmooth calculus rules used here are described by Khan and Barton (2015) and Barton et al. (2017). In particular, they require knowledge of when a nonsmooth elemental function like `abs` is exactly at its "kink" or not, which is difficult using floating point arithmetic. This implementation, by default, considers any domain point within an absolute tolerance of `1e-08` of a kink to be at that kink. In all of the exported functions listed above, this tolerance may be edited via a keyword argument `ztol`. For example, when using `eval_gen_gradient`, we could write:
 ```julia
 y, yGrad = eval_gen_gradient(f, x, ztol=1e-5)
 ```

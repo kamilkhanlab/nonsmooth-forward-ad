@@ -1,10 +1,12 @@
 # nonsmooth-forward-ad
-The `NonsmoothFwdAD` module in [NonsmoothFwdAD.jl](src/NonsmoothFwdAD.jl) provides an implementation in Julia of two recent methods for generalized derivative evaluation:
+The `NonsmoothFwdAD` module in [NonsmoothFwdAD.jl](src/NonsmoothFwdAD.jl) provides an implementation in Julia of two of our recent methods for generalized derivative evaluation:
 
 - the [vector forward mode of automatic differentiation (AD)][1] for composite functions, and
 - the [compass difference rule][2] for bivariate scalar-valued functions.
 
-These methods apply to continuous functions that are finite compositions of simple "scientific calculator" operations, but may be nonsmooth. Operator overloading is used to automatically apply generalized differentiation rules to each of these simple operations. This implementation doesn't depend on any packages external to Julia.
+The methods here apply to continuous functions that are finite compositions of simple "scientific calculator" operations, but may be nonsmooth. Operator overloading is used to automatically apply generalized differentiation rules to each of these simple operations. The computed generalized derivatives preserve many of the beneficial properties of derivatives of smooth functions; [see below](#method-overview) for more details.
+
+This implementation doesn't depend on any packages external to Julia.
 
 ## Example
 
@@ -38,9 +40,12 @@ end
 ```
 
 ## Method overview
+
 The standard vector forward mode of automatic differentiation (AD) evaluates derivative-matrix products efficiently for composite smooth functions, and is described by Griewank and Walther (2008). For a composite smooth function **f** of *n* variables, and with derivative **Df**, the vector forward AD mode takes a domain vector **x** and a matrix **M** as input, and produces the product **Df(x) M** as output. To do this, the method regards **f** as a composition of simple elemental functions (such as the arithmetic operations `+`/`-`/`*`/`/` and trigonometric functions), and handles each elemental function using the standard chain rule for differentiation.
 
-Khan and Barton (2015) showed that the vector forward AD mode can be generalized to handle composite nonsmooth functions, by defining additional calculus rules for elemental nonsmooth functions such as `abs`, `min`, `max`, and the Euclidean norm. These calculus rules are based on a new construction called the "LD-derivative", which is a variant of an earlier construction by Nesterov (2005). The resulting "derivative" in the output derivative-matrix product is a valid generalized derivative for use in methods for nonsmooth optimization and equation-solving. Khan and Barton's nonsmooth vector forward AD mode is also a generalization of a directional derivative evaluation method by Griewank (1994); Griewank's method is recovered when the chosen matrix **M** has only one column. See Barton et al. (2017) for further discussion of applications and extensions of the nonsmooth vector forward AD mode. 
+For nonsmooth functions, this becomes more complicated. While generalized derivatives such as Clarke's generalized Jacobian are well-defined for continuous functions that are not differentiable everywhere, they have traditionally been considered difficult to evaluate for composite nonsmooth functions, due to failure of classical chain rules. We expect a "correct" generalized derivative to be the actual derivative/gradient when an ostensibly nonsmooth function is in fact smooth, and to be an actual subgradient when the function is convex. Naive extensions of AD to nonsmooth functions, however, do not have these properties.
+
+Khan and Barton (2015) showed that the vector forward AD mode can be generalized to handle composite nonsmooth functions, by defining additional calculus rules for elemental nonsmooth functions such as `abs`, `min`, `max`, and the Euclidean norm. These calculus rules are based on a new construction called the "LD-derivative", which is a variant of an earlier construction by Nesterov (2005). The resulting "derivative" in the output derivative-matrix product is a valid generalized derivative for use in methods for nonsmooth optimization and equation-solving, with essentially the same properties as an element of Clarke's generalized Jacobian. Khan and Barton's nonsmooth vector forward AD mode is also a generalization of a directional derivative evaluation method by Griewank (1994); Griewank's method is recovered when the chosen matrix **M** has only one column. See Barton et al. (2017) for further discussion of applications and extensions of the nonsmooth vector forward AD mode. 
 
 Khan and Yuan (2020) showed that, for bivariate scalar-valued functions that are locally Lipschitz continuous and directionally differentiable, valid generalized derivatives may be constructed by assembling four directional derivative evaluations into a so-called "compass difference", without the LD-derivative calculus required in the nonsmooth vector forward AD mode. 
 
@@ -76,8 +81,13 @@ The following functions are exported by `NonsmoothFwdAD`. Except where noted, th
 - `(y, yCompass) = eval_compass_difference(f::Function, x::Vector{Float64})`:	
 
 	- evaluates `y = f(x)` and the compass difference `yCompass` of a scalar-valued function `f` at `x`. If `f` has a domain dimension of 1 or 2, then `yCompass` is guaranteed to be an element of Clarke's generalized gradient.
+	
+#### Handling nonsmoothness
 
-All exported functions have an optional key argument for `ztol` that allows for a variable value for the function tolerance to be set by the user. A default value is set to: `1e-08`. 
+The nonsmooth calculus rules used here are described by Khan and Barton (2015) and Barton et al. (2017). In particular, they require knowledge of when a nonsmooth elemental function like `abs` is exactly at its "kink" or not, which is difficult using floating point arithmetic. This implementation, by default, considers any domain point within an absolute tolerance of `1e-08` of a kink to be at that kink. In the exported functions listed above, this "zero tolerance" may be edited via a keyword argument `ztol`. For example, in `eval_gen_gradient`, we could write:
+```julia
+y, yGrad = eval_gen_gradient(f, x, ztol=1e-5)
+```
 	
 ### Operator overloading
 
@@ -86,10 +96,6 @@ Analogous to the `adouble` class described by Griewank and Walther (2008), this 
 - `val::Float64`: its output value
 - `dot::Vector{Float64}`: its output generalized derivative
 - `ztol::Float64`: the capture radius for nonsmooth operations with kinks. Any quantity within `ztol` of a kink is considered to be at that kink. Default value: `1e-08`.
-	
-### Handling nonsmoothness
-
-The nonsmooth calculus rules used here are described by Khan and Barton (2015) and Barton et al. (2017). In particular, they require knowledge of when a nonsmooth elemental function like `abs` is exactly at its "kink" or not, which is difficult using floating point arithmetic. This implementation, by default, considers any domain point within an absolute tolerance of `1e-08` of a kink to be at that kink. The user has the ability to change this tolerance.
 
 ## References
 - KA Khan and PI Barton, [A vector forward mode of automatic differentiation for generalized derivative evaluation][1], *Optimization Methods and Software*, 30(6):1185-1212, 2015. DOI:10.1080/10556788.2015.1025400

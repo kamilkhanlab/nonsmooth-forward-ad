@@ -25,6 +25,7 @@ overloaded just like "log" or "abs", and a new binary operation would be overloa
 just like "x*y" or "hypot".
 
 Written by Kamil Khan on February 5, 2022
+Edited by Maha Chaudhry in April 2022
 =#
 module NonsmoothFwdAD
 
@@ -78,7 +79,7 @@ function eval_ld_derivative(
     f::Function,
     x::Vector{Float64},
     xDot::Matrix{Float64};
-    ztol::Float64 = DEFAULT_ZTOL #sets default value
+    ztol::Float64 = DEFAULT_ZTOL 
 )
     # use operator overloading to compute f(x) and f'(x; xDot)
     yLD = eval_AFloat_vec_output(f, x, xDot, ztol = ztol)
@@ -113,8 +114,7 @@ function eval_AFloat_vec_output(
     ztol::Float64 = DEFAULT_ZTOL
 )
     # express inputs as AFloats
-    ztol = fill(ztol, size(x))
-    xLD = [AFloat(v, Vector(vDot), vztol) for (v, vDot, vztol) in zip(x, eachrow(xDot), ztol)]
+    xLD = [AFloat(v, Vector(vDot), ztol) for (v, vDot) in zip(x, eachrow(xDot))]
 
     # use operator overloading to compute f(x) and f'(x; xDot)
     yLD = f(xLD)
@@ -161,7 +161,7 @@ end
 # compute:
 #   y = the function value f(x), and
 #   yDeriv = the lexicographic derivative D_L f(x; xDot)
-#   (xDot defaults to I if not provided)
+#   (xDot defaults to I if not provided, skipping the final linear solve.)
 function eval_gen_derivative(
     f::Function,
     x::Vector{Float64},
@@ -173,7 +173,6 @@ function eval_gen_derivative(
     return y, yDeriv
 end
 
-# Secondary input type to speed up compile time:
 function eval_gen_derivative(
     f::Function,
     x::Vector{Float64};
@@ -187,7 +186,7 @@ end
 #   y = the function value f(x), and
 #   yGrad = the lexicographic gradient grad_L f(x; xDot),
 #           which is a vector (and the transpose of the lex. derivative)
-#   (xDot defaults to I if not provided)
+#   (xDot defaults to I if not provided, skipping the final linear solve.)
 function eval_gen_gradient(
     f::Function,
     x::Vector{Float64},
@@ -201,7 +200,6 @@ function eval_gen_gradient(
     return yLD[1].val, (yLD[1].dot'/ xDot)'
 end
 
-# Secondary input type to speed up compile time:
 function eval_gen_gradient(
     f::Function,
     x::Vector{Float64};
@@ -217,7 +215,11 @@ end
 #   y = the function value f(x), and
 #   yCompass = the compass difference of f at x.
 # x must be either a scalar or vector, and yCompass is the same type as x.
-function eval_compass_difference(f::Function, x::Vector{Float64}; ztol::Float64 = DEFAULT_ZTOL)
+function eval_compass_difference(
+    f::Function,
+    x::Vector{Float64};
+    ztol::Float64 = DEFAULT_ZTOL
+)
     y = f(x)
 
     (length(y) == 1) ||
@@ -237,7 +239,11 @@ function eval_compass_difference(f::Function, x::Vector{Float64}; ztol::Float64 
     return y, yCompass
 end
 
-function eval_compass_difference(f::Function, x::Float64; ztol::Float64 = DEFAULT_ZTOL)
+function eval_compass_difference(
+    f::Function,
+    x::Float64;
+    ztol::Float64 = DEFAULT_ZTOL
+)
     (y, yCompassVec) = eval_compass_difference(f, [x], ztol = ztol)
     return y, yCompassVec[1]
 end

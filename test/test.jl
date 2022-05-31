@@ -1,7 +1,7 @@
-#= 
+#=
 test.jl
 =======
-Uses .NonsmoothFwdAD to evaluate generalized derivative elements, replicating 
+Uses .NonsmoothFwdAD to evaluate generalized derivative elements, replicating
 the results of calculations from the following article:
 
 [1]: KA Khan and PI Barton (2013), https://doi.org/10.1145/2491491.2491493
@@ -10,7 +10,6 @@ the results of calculations from the following article:
 include("../src/NonsmoothFwdAD.jl")
 
 using .NonsmoothFwdAD
-
 
 println("Replicating Example 6.1 from [1]:")
 

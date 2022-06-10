@@ -63,7 +63,7 @@ Base.promote(uA::Float64, uB::AFloat) = reverse(promote(uB, uA))
 Base.promote(uA::AFloat, uB::AFloat) = (uA, uB)
 
 # for u::AFloat, define "u[1]" to mean "u", and set length(u)=1. 
-# Helps handle vector/scalar outputs and dotted operations like ".+".
+# Helps handle vector/scalar outputs.
 Base.getindex(u::AFloat, i::Int) = (i == 1) ? u : throw(DomainError("i: must be 1"))
 Base.length(u::AFloat) = 1
 

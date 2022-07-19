@@ -64,7 +64,7 @@ Base.promote(uA::AFloat, uB::AFloat) = (uA, uB)
 
 # for u::AFloat, define "u[1]" to mean "u", and set length(u)=1. 
 # Helps handle vector/scalar outputs.
-Base.getindex(u::AFloat, i::Int) = (i == 1) ? u : throw(DomainError("i: must be 1"))
+Base.getindex(u::AFloat, i::Int) = (i == 1) ? u : throw(DomainError(:i, "must be 1"))
 Base.length(u::AFloat) = 1
 
 ## define high-level generalized differentiation operations, given a mathematical
@@ -132,7 +132,7 @@ function eval_AFloat_vec_output(
     ztol::Float64 = DEFAULT_ZTOL
 )
     # express inputs as AFloats
-    xLD = map(AFloat, x, xDot, ztol)
+    xLD = [AFloat(v, vDot, ztol) for (v, vDot) in zip(x, xDot)]
 
     # use operator overloading to compute f(x) and f'(x; xDot)
     yLD = f(xLD)
@@ -223,7 +223,7 @@ function eval_compass_difference(
     y = f(x)
 
     (length(y) == 1) ||
-        throw(DomainError("f; this function is not scalar-valued"))
+        throw(DomainError(:f, "must be scalar-valued"))
 
     fVec(u) = [f(u)[1]] # account for f returning either a Float64 or Vector{Float64}
 

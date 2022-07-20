@@ -1,5 +1,5 @@
 # nonsmooth-forward-ad
-The `NonsmoothFwdAD` module in [NonsmoothFwdAD.jl](src/NonsmoothFwdAD.jl) provides an implementation in Julia of two of our recent methods for generalized derivative evaluation:
+The `NonsmoothFwdAD` module in [NonsmoothFwdAD.jl](src/NonsmoothFwdAD.jl) provides an implementation in Julia of two of our recent methods for evaluating generalized derivatives of nonsmooth functions:
 
 - the [vector forward mode of automatic differentiation (AD)][1] for composite functions, and
 - the [compass difference rule][2] for bivariate scalar-valued functions.

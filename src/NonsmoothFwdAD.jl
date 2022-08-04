@@ -79,10 +79,10 @@ function eval_ld_derivative(
     f::Function,
     x::Vector{Float64},
     xDot::Matrix{Float64};
-    ztol::Float64 = DEFAULT_ZTOL 
+    kwargs...
 )
     # use operator overloading to compute f(x) and f'(x; xDot)
-    yLD = eval_AFloat_vec_output(f, x, xDot, ztol = ztol)
+    yLD = eval_AFloat_vec_output(f, x, xDot; kwargs...)
 
     # recover outputs from AFloats
     y = [vLD.val for vLD in yLD]
@@ -95,10 +95,10 @@ function eval_ld_derivative(
     f::Function,
     x::Vector{Float64},
     xDot::Vector{Vector{Float64}};
-    ztol::Float64 = DEFAULT_ZTOL
+    kwargs...
 )
     # use operator overloading to compute f(x) and f'(x; xDot)
-    yLD = eval_AFloat_vec_output(f, x, xDot, ztol = ztol)
+    yLD = eval_AFloat_vec_output(f, x, xDot; kwargs...)
 
     # recover outputs from AFloats
     y = [vLD.val for vLD in yLD]
@@ -150,10 +150,10 @@ function eval_dir_derivative(
     f::Function,
     x::Vector{Float64},
     xDot::Vector{Float64};
-    ztol::Float64 = DEFAULT_ZTOL
+    kwargs...
 )
     xDotMatrix = reshape(xDot, :, 1)
-    (y, yDotMatrix) = eval_ld_derivative(f, x, xDotMatrix, ztol = ztol)
+    (y, yDotMatrix) = eval_ld_derivative(f, x, xDotMatrix; kwargs...)
     yDot = vec(yDotMatrix)
     return y, yDot
 end
@@ -166,9 +166,9 @@ function eval_gen_derivative(
     f::Function,
     x::Vector{Float64},
     xDot::Matrix{Float64};
-    ztol::Float64 = DEFAULT_ZTOL
+    kwargs...
 )
-    (y, yDot) = eval_ld_derivative(f, x, xDot, ztol = ztol)
+    (y, yDot) = eval_ld_derivative(f, x, xDot; kwargs...)
     yDeriv = yDot / xDot
     return y, yDeriv
 end
@@ -176,9 +176,9 @@ end
 function eval_gen_derivative(
     f::Function,
     x::Vector{Float64};
-    ztol::Float64 = DEFAULT_ZTOL
+    kwargs...
 )
-    (y, yDot) = eval_ld_derivative(f, x, Matrix{Float64}(I(length(x))), ztol = ztol)
+    (y, yDot) = eval_ld_derivative(f, x, Matrix{Float64}(I(length(x))); kwargs...)
     return y, yDot
 end
 
@@ -191,10 +191,10 @@ function eval_gen_gradient(
     f::Function,
     x::Vector{Float64},
     xDot::Matrix{Float64};
-    ztol::Float64 = DEFAULT_ZTOL
+    kwargs...
 )
     # use operator overloading to compute f(x) and f'(x; xDot)
-    yLD = eval_AFloat_vec_output(f, x, xDot, ztol = ztol)
+    yLD = eval_AFloat_vec_output(f, x, xDot; kwargs...)
 
     # compute generalized gradient element
     return yLD[1].val, (yLD[1].dot'/ xDot)'
@@ -203,10 +203,10 @@ end
 function eval_gen_gradient(
     f::Function,
     x::Vector{Float64};
-    ztol::Float64 = DEFAULT_ZTOL
+    kwargs...
 )
     # use operator overloading to compute f(x) and f'(x; xDot)
-    yLD = eval_AFloat_vec_output(f, x, Matrix{Float64}(I(length(x))), ztol = ztol)
+    yLD = eval_AFloat_vec_output(f, x, Matrix{Float64}(I(length(x))); kwargs...)
 
     return yLD[1].val, yLD[1].dot
 end
@@ -218,7 +218,7 @@ end
 function eval_compass_difference(
     f::Function,
     x::Vector{Float64};
-    ztol::Float64 = DEFAULT_ZTOL
+    kwargs...
 )
     y = f(x)
 
@@ -231,8 +231,8 @@ function eval_compass_difference(
     coordVec = zeros(length(x))
     for i in eachindex(x)
         coordVec[i] = 1.0
-        _, yDotPlus = eval_dir_derivative(fVec, x, coordVec, ztol = ztol)
-        _, yDotMinus = eval_dir_derivative(fVec, x, -coordVec, ztol = ztol)
+        _, yDotPlus = eval_dir_derivative(fVec, x, coordVec; kwargs...)
+        _, yDotMinus = eval_dir_derivative(fVec, x, -coordVec; kwargs...)
         yCompass[i] = 0.5*(yDotPlus[1] - yDotMinus[1])
         coordVec[i] = 0.0
     end
@@ -242,9 +242,9 @@ end
 function eval_compass_difference(
     f::Function,
     x::Float64;
-    ztol::Float64 = DEFAULT_ZTOL
+    kwargs...
 )
-    (y, yCompassVec) = eval_compass_difference(f, [x], ztol = ztol)
+    (y, yCompassVec) = eval_compass_difference(f, [x]; kwargs...)
     return y, yCompassVec[1]
 end
 

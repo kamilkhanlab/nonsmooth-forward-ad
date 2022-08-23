@@ -315,20 +315,11 @@ Base.cos(u::AFloat) = AFloat(cos(u.val), -sin(u.val) * u.dot, u.ztol)
 # When evaluating zDot, if any quantity "q" has abs(q) < u.ztol,
 # then "q" is considered to be 0.
 function Base.abs(u::AFloat)
-    vVal = abs(u.val)
-    if vVal > u.ztol
-        s = sign(u.val)
-    else
-        s = 0.0
-        for d in u.dot
-            if abs(d) > u.ztol
-                s = sign(d)
-                break
-            end
-        end
-    end
-    vDot = s * u.dot
-    return AFloat(vVal, vDot, u.ztol)
+    uVec = [u.val; u.dot]
+    k = findfirst(!isapprox(0.0, atol=u.ztol), uVec)
+    
+    s = isnothing(k) ? 0.0 : sign(uVec[k])
+    return AFloat(abs(u.val), s * u.dot, u.ztol)
 end
 
 # bivariate max and min.
@@ -342,23 +333,14 @@ Base.min(uA::AFloat, uB::AFloat) = 0.5*(uA + uB - abs(uA - uB))
 # sqrt(uA^2 + uB^2); this is LinearAlgebra.hypot in Julia.
 # uA.ztol is used as in abs(::AFloat)
 function Base.hypot(uA::AFloat, uB::AFloat)
+    uVecA = [uA.val; uA.dot]
+    uVecB = [uB.val; uB.dot]
+    vVec = abs.(uVecA) .+ abs.(uVecB)
+    k = findfirst(!isapprox(0.0, atol=uA.ztol), vVec)
+    
+    s = isnothing(k) ? zeros(2) : normalize([uVecA[k], uVecB[k]])
     vVal = hypot(uA.val, uB.val)
-    if vVal > uA.ztol
-        sA = uA.val / vVal
-        sB = uB.val / vVal
-    else
-        sA = 0.0
-        sB = 0.0
-        for (dA, dB) in zip(uA.dot, uB.dot)
-            sNorm = hypot(dA, dB)
-            if sNorm > uA.ztol
-                sA = dA / sNorm
-                sB = dB / sNorm
-                break
-            end
-        end
-    end
-    vDot = sA * uA.dot + sB * uB.dot
+    vDot = s[1] * uA.dot + s[2] * uB.dot
     return AFloat(vVal, vDot, uA.ztol)
 end
 @define_mixed_input_variants hypot

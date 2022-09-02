@@ -317,17 +317,32 @@ Base.cos(u::AFloat) = AFloat(cos(u.val), -sin(u.val) * u.dot, u.ztol)
 function Base.abs(u::AFloat)
     uVec = [u.val; u.dot]
     k = findfirst(!isapprox(0.0, atol=u.ztol), uVec)
-    
     s = isnothing(k) ? 0.0 : sign(uVec[k])
+
     return AFloat(abs(u.val), s * u.dot, u.ztol)
 end
 
 # bivariate max and min.
-# Uses the identity max(uA,uB) = 0.5*(uA+uB+abs(uA-uB)), and similarly for min
-Base.max(uA::AFloat, uB::AFloat) = 0.5*(uA + uB + abs(uA - uB))
+function Base.max(uA::AFloat, uB::AFloat)
+    diffVec = [uA.val - uB.val; uA.dot - uB.dot] 
+    k = findfirst(!isapprox(0.0, atol=uA.ztol), diffVec)
+
+    vVal = max(uA.val, uB.val)
+    vDot = isnothing(k) ? zeros(2) :
+        (diffVec[k] > 0.0 ? uA.dot : uB.dot)
+    return AFloat(vVal, vDot, uA.ztol)
+end
 @define_mixed_input_variants max
 
-Base.min(uA::AFloat, uB::AFloat) = 0.5*(uA + uB - abs(uA - uB))
+function Base.min(uA::AFloat, uB::AFloat)
+    diffVec = [uA.val - uB.val; uA.dot - uB.dot] 
+    k = findfirst(!isapprox(0.0, atol=uA.ztol), diffVec)
+
+    vVal = min(uA.val, uB.val)
+    vDot = isnothing(k) ? zeros(2) :
+        (diffVec[k] < 0.0 ? uA.dot : uB.dot)
+    return AFloat(vVal, vDot, uA.ztol)
+end
 @define_mixed_input_variants min
 
 # sqrt(uA^2 + uB^2); this is LinearAlgebra.hypot in Julia.
@@ -337,8 +352,8 @@ function Base.hypot(uA::AFloat, uB::AFloat)
     uVecB = [uB.val; uB.dot]
     vVec = abs.(uVecA) .+ abs.(uVecB)
     k = findfirst(!isapprox(0.0, atol=uA.ztol), vVec)
-    
     s = isnothing(k) ? zeros(2) : normalize([uVecA[k], uVecB[k]])
+    
     vVal = hypot(uA.val, uB.val)
     vDot = s[1] * uA.dot + s[2] * uB.dot
     return AFloat(vVal, vDot, uA.ztol)

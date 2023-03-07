@@ -9,7 +9,9 @@ the results of calculations from the following article:
 
 include("../src/NonsmoothFwdAD.jl")
 
-using .NonsmoothFwdAD
+using .NonsmoothFwdAD,
+ .GeneralizedDiff,
+ .ConvexOptimization
 
 println("Replicating Example 6.1 from [1]:")
 

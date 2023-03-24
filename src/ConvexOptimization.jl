@@ -3,14 +3,14 @@ module ConvexOptimization
 include("../src/GeneralizedDiff.jl")
 
 using .GeneralizedDiff
-using JuMP, Ipopt, LinearAlgebra
+using JuMP, Ipopt, LinearAlgebra, NLopt
 
 export semiSmoothNewton, 
     LPNewton, 
     levelMethod
 
 """
-	semiSmoothNewton(f::Function, x0::Vector{Float64}, kwargs…)
+    semiSmoothNewton(f::Function, x0::Vector{Float64}, kwargs…)
 
 Compute vector `x` where `f(x) = 0` using the semi-smooth Newton method where there are multiple inputs to `f` but only one output. 
 
@@ -26,7 +26,6 @@ Compute vector `x` where `f(x) = 0` using the semi-smooth Newton method where th
 - `maxIter::Int64`: maximum number of solver iterations. Set to `1000` by default. 
 
 """
-
 function semiSmoothNewton(
     f::Function,                # continous convex function `f`  
     x0::Vector{Float64};        # initial guess
@@ -65,7 +64,7 @@ function semiSmoothNewton(
 end #function
 
 """
-	LP(f::Function, z0::Vector{Float64}, kwargs…)
+	LPNewton(f::Function, z0::Vector{Float64}, kwargs…)
 
 Compute vector `z` where `f(z) = 0` using the Linear Program Newton method where the number of inputs to `f` is equivalent to number of outputs. 
 
@@ -145,7 +144,7 @@ function LPNewton(
         @constraint(model3, [t=1:n], (-fsi[t] - gsi[t,:]'*(zk - s)) <= gamma*(Nsi^2))    # constraint (6) x k           
         @constraint(model3, [t=1:n], (zk[t] - s[t]) <= gamma*Nsi)                        # constraint (7) x k           
         @constraint(model3, [t=1:n], (s[t] - zk[t]) <= gamma*Nsi)                        # constraint (8) x k           
-        optimize!(model3)
+        JuMP.optimize!(model3)
 
         s = value.(model3[:zk])   
         GAMMA = value.(model3[:gamma])
@@ -163,9 +162,9 @@ function LPNewton(
 end # function 
 
 """
-	LP(f::Function, z0::Vector{Float64}, kwargs…)
+	levelMethod(f::Function, z0::Vector{Float64}, kwargs…)
 
-Compute vector `z` where `f(z) = 0` using the Linear Program Newton method where the number of inputs to `f` is equivalent to number of outputs. 
+Compute vector `x` to minimize `f(x)` using the Level method where there are multiple inputs to `f` but only one output. . 
 
 # Arguments
 
@@ -220,6 +219,7 @@ function levelMethod(
         Ipopt.Optimizer,
         "tol" => TOLERANCE,       
         "max_iter" => 1000
+        # "algorithm" => :LD_MMA
         )
     )     
     set_silent(model1)
@@ -232,9 +232,10 @@ function levelMethod(
 
     # Set up model 2 - quadratic program to minimize Euclidean projection:
     model2 = Model(optimizer_with_attributes(  
-        Ipopt.Optimizer,
+        NLopt.Optimizer,
         "tol" => TOLERANCE,
-        "max_iter" => 1000
+        "max_iter" => 1000,
+        "algorithm" => :LD_MMA
         )
     )
     set_silent(model2)
@@ -254,7 +255,7 @@ function levelMethod(
 
         # Calculate fk^(xi) from MODEL 1:
         @constraint(model1, fxi + gxi'*(xn1 - xi) <= t)      
-        optimize!(model1)
+        JuMP.optimize!(model1)
         
         # pull optimal values for iteration:
         xk = value.(model1[:xn1])
@@ -262,14 +263,14 @@ function levelMethod(
         fStarxk = f(xk)                # req (2) for stopCondition
 
         # Calculate x(i+1) from MODEL 2:
-        @constraint(model2, fxi + gxi'*(xn12 - xi) <= (1-alpha)*fHxk + alpha*fStarxk) 
-        optimize!(model2)
+        @constraint(model2, fxi + gxi'*(xn12 - xi) <= (1-alpha)*fHxk + alpha*fStarxk)       #TODO: Potentially HERE
+        JuMP.optimize!(model2)
         xi = value.(model2[:xn12])   
 
         # Update stopping condition:
-        stopCondition = abs(fStarxk - fHxk)
+        stopCondition = abs(fStarxk - fHxk)     #TODO: Potentially here
 
-        print((xk, xi, fStarxk, fHxk), "\n")    #TODO: Delete
+        print((xk, xi, abs(fStarxk - fHxk), abs(fxi - fHxk)), "\n")    #TODO: Delete
         
         # Set breaking condition on maximum iterations:
         k = k + 1

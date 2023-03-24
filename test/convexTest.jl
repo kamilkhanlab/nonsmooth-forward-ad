@@ -83,9 +83,13 @@ print("\nMethod 3: Level Method for finding minima:\n\n")
 # Example 1:
 f4(x) = (x[1] - 1.0)^2 + (x[2] - 3.0)^2 
 
-x4, _, fHxk4 = levelMethod(f4, [0.0, 1.0], lb = [-1.0, -1.0], ub = [3.0, 4.0])
+x4, _, fHxk4 = levelMethod(f4, [1.0, 0.1], lb = [-1.0, -1.0], ub = [3.0, 4.0], maxIters = 1000, alpha=0.001)
 x4, _, fHxk4 = levelMethod(f4, [0.1, 0.1], lb = [-1.0, -1.0], ub = [3.0, 4.0], epsilon = 1e-8)
 print("\nFor f1(x), xk = ", x4, " and fHxk = ", fHxk4, "\n\n")    
+
+f2(x) = (1.0 + abs(x[1] - x[2]))*(x[1] - x[2])
+x2, _, fHxk2 = levelMethod(f2, [0.0, 0.0], alpha=0.01)
+print("\nFor f1(x), xk = ", x2, " and fHxk = ", fHxk2, "\n\n")  
 
 # Example 2:
 f5(x) = max([2.0, -1.0, 2.0]'*[x[1], x[2], x[3]] + 2.0,                    
@@ -105,5 +109,4 @@ ub6 = [5.0, 5.0]
 
 x6, _, fHxk6 = levelMethod(f6, [1.0, 2.0], lb = lb6, ub = ub6, A = A6, b = b6)
 print("\nFor f3(x), xk = ", x6, " and fHxk = ", fHxk6, "\n\n")
-
 

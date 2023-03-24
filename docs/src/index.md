@@ -11,17 +11,62 @@ add https://github.com/kamilkhanlab/nonsmooth-forward-ad
 Then, to use the package:
 
 ```Julia
-using ConvexSampling
+using NonSmoothFwdAD
 ```
 
 ## Example
 
 The usage of `NonSmoothFwdAD` is demonstrated by scripts [test.jl](test/test.jl) and [convexTest.jl](test/convexTest.jl). 
 
-Replicating Example 6 in F. Facchinei et. al (2014) for the given optimization problem.
+#### GeneralizedDiff
+
+Consider the following nonsmooth function of two variables, to replicate Example 6.2 from Khan and Barton (2013):
+
+```Julia
+f(x) = max(min(x[1], -x[2]), x[2] - x[1])
+```
+
+Using the `NonsmoothFwdAD` module (after `include("NonsmoothFwdAD.jl")` and using `.NonsmoothFwdAD`, `.GeneralizedDiff`), we may evaluate a value `y` and a generalized gradient element `yGrad` of `f` at `[0.0, 0.0]` by the following alternative approaches, using the nonsmooth vector forward mode of AD.
+
+- By defining f beforehand:
+
+```Julia
+    f(x) = max(min(x[1], -x[2]), x[2] - x[1])
+    y, yGrad = eval_gen_gradient(f, [0.0, 0.0])
+
+    #output 
+    y = 0.0
+    yGrad = [0.0, -1.0]
+```
+
+- By defining f as an anonymous function:
+
+```Julia
+    y, yGrad = eval_gen_gradient([0.0, 0.0]) do x
+        return max(min(x[1], -x[2]), x[2] - x[1])
+    end	
+
+    #output 
+    y = 0.0
+    yGrad = [0.0, -1.0]
+```
+
+Here, `eval_gen_gradient` constructs `yGrad` as a `Vector{Float64}`, and only applies to scalar-valued functions. For vector-valued functions, `eval_gen_derivative` instead produces a generalized derivative element `yDeriv::Matrix{Float64}`.
+
+For scalar-valued functions of one or two variables, the "compass difference" is guaranteed to be an element of Clarke's generalized gradient. We may calculate the compass difference `yCompass::Vector{Float64}` for the above function `f` at `[0.0, 0.0]` as follows:
+
+```Julia
+_, yCompass = eval_compass_difference([0.0, 0.0]) do x
+    return max(min(x[1], -x[2]), x[2] - x[1])
+end	
+```
+
+#### ConvexOptimization
+
+Consider the following optimization problem, replicating Example 6 in F. Facchinei et. al (2014): 
 
 ```
-min(x[1] + x[2])*x[4] + 0.5*(x[2] + x[3])^2 
+min PHI(x) = (x[1] + x[2])*x[4] + 0.5*(x[2] + x[3])^2 
     s.t.    x[1] <= 0
             x[2] >= 1
             x[4] >= 0
@@ -49,24 +94,25 @@ f(x) = [x[4] + x[1+uOffset] - x[2+uOffset] - x[5+uOffset],
     min(x[5+uOffset], x[5+vOffset])] 
 ```
 
-For an initial guess of `z0 = [1.0, 4.0, -2.0, 1.0,
-    3.0, 3.0, 1.0, 4.0, 1.0,
-    0.0, 1.0, 3.0, 1.0, 3.0]` 
-and no other binding set constraints, the LPNewton method locates the minima `(z, f(z))` by solving `f(z)=0`. 
+Using the `NonsmoothFwdAD` module (after `include("NonsmoothFwdAD.jl")` and using `.NonsmoothFwdAD`, `.GeneralizedDiff`, `.ConvexOptimization`), the LPNewton method can locate the minima of `(x, PHI(x))` by solving `f(x) = 0` given no other binding set constraints. Assume an initial guess of `x0` for `f`.
 
 ```Julia
-z0 = [1.0, 4.0, -2.0, 1.0,
+x0 = [1.0, 4.0, -2.0, 1.0,
     3.0, 3.0, 1.0, 4.0, 1.0,
     0.0, 1.0, 3.0, 1.0, 3.0]
-z, _, gamma = LPNewton(f, z0)
+x, _, gamma = LPNewton(f, x0)
 
 #output
 
-z = [0.0, 3.32, -3.32, 0.0, 
+x = [0.0, 3.32, -3.32, 0.0, 
     2.76, 2.76, 0.0, 3.32, 0.0, 
     0.0, 0.0, 2.32, 0.0, 0.0]
 gamma = 4.99
 ```
+
+Thus, the solution for `PHI(x)` is `(x = [0.0, 3.32, -3.32, 0.0], PHI(x) = 0.0)`. 
+
+Note that the solution set of the optimization problem `PHI(x)` is `X = {(0, t, −t, 0)|t ≥ 1}`. Different initial guesses `x0` could produce different local optima for `PHI(x)` where `f(x) = 0`. This is just one potential solution. 
 
 ## Authors
 

@@ -1,22 +1,22 @@
 # Exported Structs
 ```@docs
-AFloat
+Main.NonsmoothFwdAD.GeneralizedDiff.AFloat
 ```
 
 # Exported Functions
 
 ## Functions from GeneralizedDiff.jl
 ```@docs
-eval_ld_derivative,
-eval_dir_derivative,
-eval_gen_derivative,
-eval_gen_gradient,
-eval_compass_difference
+Main.NonsmoothFwdAD.GeneralizedDiff.eval_ld_derivative
+Main.NonsmoothFwdAD.GeneralizedDiff.eval_dir_derivative
+Main.NonsmoothFwdAD.GeneralizedDiff.eval_gen_derivative
+Main.NonsmoothFwdAD.GeneralizedDiff.eval_gen_gradient
+Main.NonsmoothFwdAD.GeneralizedDiff.eval_compass_difference
 ```
 
 ## Functions from ConvexOptimization.jl
 ```@docs
-semiSmoothNewton
-LPNewton
-levelMethod
+Main.NonsmoothFwdAD.ConvexOptimization.semiSmoothNewton
+Main.NonsmoothFwdAD.ConvexOptimization.LPNewton
+Main.NonsmoothFwdAD.ConvexOptimization.levelMethod
 ```

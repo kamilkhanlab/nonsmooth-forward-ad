@@ -45,7 +45,7 @@ const DEFAULT_ZTOL = 1e-8   # used to decide if we're at the kink of "abs" or "h
 """
 	AFloat{val::Float64, dot::Vector{Float64}, ztol::Float64}
 
-Type representing generalized derivative information.
+Type representing generalized derivative information analogous to the `adouble` class described by Griewank and Walther (2008).
 
 # Fields
 - `val::Float64`: output value

@@ -34,7 +34,7 @@ A2 = [1.2  -1.0;
          -1.0  -2.0]
 B2 = [0.5; -0.2; -1.0]
 
-s2, _, gamma2 = LPNewton(f2, [0.3, 0.1], lb = [-2.0, -2.0], ub = [0.8, 0.8], A = A2, b = B2, TOLERANCE = 1E-6)
+s2, _, gamma2 = LPNewton(f2, [0.3, 0.1], lb = [-2.0, -2.0], ub = [0.8, 0.8], A = A2, b = B2, solverTolerance = 1E-6)
 
 print("\n\nFor f2(x), z = ", s2, " and gamma = ", gamma2)
 
@@ -80,16 +80,12 @@ print("\n\nFor fStarB(x) with no bounds at z0 = ", z0StarB, "z = ", sStarB1, " a
 print("\n\nFor fStarB(x) with no bounds at z0 = ", zeros(14), "z = ", sStarB2, " and gamma = ", gammaStarB2)
 
 print("\nMethod 3: Level Method for finding minima:\n\n")           
-# Example 1:
+# Example 1: 
 f4(x) = (x[1] - 1.0)^2 + (x[2] - 3.0)^2 
 
 x4, _, fHxk4 = levelMethod(f4, [1.0, 0.1], lb = [-1.0, -1.0], ub = [3.0, 4.0], maxIters = 1000, alpha=0.001)
 x4, _, fHxk4 = levelMethod(f4, [0.1, 0.1], lb = [-1.0, -1.0], ub = [3.0, 4.0], epsilon = 1e-8)
-print("\nFor f1(x), xk = ", x4, " and fHxk = ", fHxk4, "\n\n")    
-
-f2(x) = (1.0 + abs(x[1] - x[2]))*(x[1] - x[2])
-x2, _, fHxk2 = levelMethod(f2, [0.0, 0.0], alpha=0.01)
-print("\nFor f1(x), xk = ", x2, " and fHxk = ", fHxk2, "\n\n")  
+print("\nFor f4(x), xk = ", x4, " and fHxk = ", fHxk4, "\n\n")    
 
 # Example 2:
 f5(x) = max([2.0, -1.0, 2.0]'*[x[1], x[2], x[3]] + 2.0,                    

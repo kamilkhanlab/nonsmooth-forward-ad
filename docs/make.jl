@@ -11,7 +11,10 @@ using .ConvexOptimization
 makedocs(sitename="NonSmoothFwdAD",
         format = Documenter.HTML(prettyurls = false),
         pages = Any["Introduction" => "index.md",
-                    "Method Overview" => "methodOverview.md",
-                    "ConvexOptimization Implementation Overview" => "convexOptimization.md",
-                    "Exported Functions" => "functions.md"]
+                    "GeneralizedDiff" => Any["generalizedDiff/methodOverview.md"
+                                             "generalizedDiff/implementationOverview.md"
+                                             "generalizedDiff/functions.md"],
+                    "ConvexOptimization" => Any["convexOptimization/implementationOverview.md"
+                                                "convexOptimization/functions.md"]
+                    ]
 )

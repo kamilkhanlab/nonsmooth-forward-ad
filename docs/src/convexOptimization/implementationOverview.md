@@ -1,4 +1,4 @@
-# ConvexOptimization Implementation Overview
+# Implementation Overview
 
 There are three methods implemented in `ConvexOptimization`. 
 
@@ -25,37 +25,32 @@ The second implemented method was the **LP-Newton method** proposed by [Facchine
 
 For systems of the form `F(z) = 0` where `z ∈ Ω` where `Ω` is a nonempty closed solution set - either whole space or polyhedral. It involves iteratively solving the following optimization problem for ($z_k, γ_k$) to convergence:
 
-min $_{z_{k+1},γ_{k+1}} (γ)$, 
+min $_{z_{k+1}} (γ_{k+1})$, 
 
-s.t. $z ∈ Ω$
-
- $||F(z_k) + G(z_k) \cdot (z_{k+1} - z_{k}) || ≤ γ_{k+1}||F(z_k)||^2$,
-
- $||z_{k+1} - z_k|| ≤ || F(z_k) ||$,
-
-$ γ_{k+1} ≥ 0$
+subject to: 
+-  $z ∈ Ω$
+-  $||F(z_k) + G(z_k) \cdot (z_{k+1} - z_{k}) || ≤ γ_{k+1}||F(z_k)||^2$,
+-  $||z_{k+1} - z_k|| ≤ || F(z_k) ||$,
+-  $ γ_{k+1} ≥ 0$
 
 Each iteration of the problem is solved using `Ipopt.jl` through Julia's `JuMP`. Note that the terms $F(z_k)$ and $G(z_k)$ are calculated using `eval_gen_derivative(f, z)` for each iteration. 
 
 The last method is the **Level method** for convex, nonsmooth minimizations. It minimizes `f(x)` for `x` by iteratively solving (1) an LP for the function subgradient and (2) a QP for x by minimizing the Euclidean norm. 
 
 1. An LP for the function subgradient: 
-
-min $t$,
-
- s.t. $f(x_i )+〈g(x_i ),x-x_i 〉≤t,i=0,…,k$
-
- $x ∈ Q$ 
-
-where $x$ is $x^*$ and $t$ is $\^f{}^*(x)$
-
+    - min $_{x^*} (t)$, 
+    - subject to:
+        -  $f(x_i )+〈g(x_i ),x^*-x_i 〉≤t, i=0,…,k$
+        -  $x ∈ Q$ 
+    - where $t$ is $\^f{}^*(x)$
 2. A QP for x by minimizing the Euclidean norm:
+    - min $_{x_k} ||x_i-x_k ||^2$,
+    - subject to:
+        -  $f(x_i )+〈g(x_i ),x_k - x_i 〉≤l_k (\alpha),i=0,…,k$ 
+        -  $x ∈ Q$ 
+    - where $l_k(\alpha)$ is $(1-\alpha)\^f{}^*(x^*) + \alpha\^f{}^*(x^*)$
 
-min $ ||x-x_k ||^2$,
+## References
 
- s.t. $f(x_i )+〈g(x_i ),x-x_i 〉≤l_k (\alpha),i=0,…,k$
-
- $x ∈ Q$
-
-where $l_k(\alpha)$ is $(1-\alpha)\^f{}^*(x) + \alpha\^f{}^*(x)$
-
+- Facchinei, A Fischer, M Herrich, [An LP-Newton method: nonsmooth equations, KKT systems, and nonisolated solutions](https://doi.org/10.1007/s10107-013-0676-6), Mathematical Programming, 146:1-36, 2014, DOI: 10.1007/s10107-013-0676-6
+- Nesterov, Y., [Lectures on Convex Optimization (2nd ed.)](https://doi.org/10.1007/978-3-319-91578-4), SOIA, 2010, DOI: 10.1007/978-3-319-91578-4

@@ -78,7 +78,7 @@ Compute vector `z` where `f(z) = 0` using the Linear Program Newton method where
 ## Constant and tolerance keyword
 
 - `epsilon::Float64`: tolerance for solver stopping condition where `f(z) >= epsilon`. Set to `1e-2` by default. 
-- `TOLERANCE::Float64`: tolerance for JuMP solver. Set to `1e-6` by default.
+- `solverTolerance::Float64`: tolerance for JuMP solver. Set to `1e-6` by default.
 - `maxIter::Int64`: maximum number of solver iterations. Set to `20` by default. 
 
 ## Constraint keywords
@@ -99,28 +99,24 @@ function LPNewton(
     lb::Vector{Float64} = ones(length(z0))*Inf,  # coordinates for lower bound of box domain on which `f` is defined
     ub::Vector{Float64} = ones(length(z0))*Inf,  # coordinates for upper bound of box domain on which `f` is defined
     epsilon::Float64 = 1e-2,                     # overall method tolerance 
-    TOLERANCE::Float64 = 1e-6,                   # solver tolerance
+    solverTolerance::Float64 = 1e-6,                   # solver tolerance
     A::Matrix{Float64} = zeros(0, length(z0)),
     b::Vector{Float64} = zeros(0),
     Aeq::Matrix{Float64} = zeros(0, length(z0)),
     beq::Vector{Float64} = zeros(0),
-    maxIters::Int64 = 20
+    maxIters::Int64 = 20,
+    solverType = Ipopt,
+    solverAttributes = ("tol" => solverTolerance, "max_iter" => 1000) 
 )
     # Initialize system:
     k = 1               # initial iteration value
     n = length(z0)      # length of initial guess vector 
     s = z0              # initial "z" value
-    GAMMA = 0           # initial "gamma" value
+    gammaValue = 0           # initial "gamma" value
     fsi = 0             # initial f(s)
     gsi = 0             # initial f'(s)
 
-    # Set up model to minimize gamma for "z": 
-    model3 = Model(optimizer_with_attributes(  
-        Ipopt.Optimizer,
-        "tol" => TOLERANCE,       
-        "max_iter" => 1000
-        )
-    )     
+    model3 = Model(optimizer_with_attributes(solverType.Optimizer, solverAttributes...))
     set_silent(model3)
 
     @variable(model3, lb[i] <= zk[i=1:n] <= ub[i])   # constraint (1)
@@ -147,9 +143,7 @@ function LPNewton(
         JuMP.optimize!(model3)
 
         s = value.(model3[:zk])   
-        GAMMA = value.(model3[:gamma])
-
-        print((k, s, f(s), GAMMA), "\n")
+        gammaValue = value.(model3[:gamma])
 
         # Set breaking condition on maximum iterations:
         k = k + 1
@@ -158,7 +152,7 @@ function LPNewton(
         end #if
     end #while
 
-    return s, f(s), GAMMA
+    return s, f(s), gammaValue
 end # function 
 
 """
@@ -176,7 +170,7 @@ Compute vector `x` to minimize `f(x)` using the Level method where there are mul
 ## Constant and tolerance keywords
 
 - `epsilon::Float64`: tolerance for solver stopping condition where `f(z) >= epsilon`. Set to `1e-2` by default. 
-- `TOLERANCE::Float64`: tolerance for JuMP solver. Set to `1e-6` by default.
+- `solverTolerance::Float64`: tolerance for JuMP solver. Set to `1e-6` by default.
 - `alpha::Float64`: level set constant for quadratic programming. Set to `1/(2+sqrt(2)` by default. 
 - `maxIter::Int64`: maximum number of solver iterations. Set to `20` by default. 
 
@@ -198,13 +192,16 @@ function levelMethod(
     lb::Vector{Float64} = ones(length(xi))*-Inf,    # coordinates for lower bound of box domain on which `f` is defined
     ub::Vector{Float64} = ones(length(xi))*Inf,     # coordinates for upper bound of box domain on which `f` is defined
     epsilon::Float64 = 1e-4,                        # overall method tolerance 
-    TOLERANCE::Float64 = 1e-8,                      # solver tolerance
+    solverTolerance::Float64 = 1e-8,                      # solver tolerance
     alpha::Float64 = 1/(2+sqrt(2)),                 # level coefficient in bounds (0,1)
     A::Matrix{Float64} = zeros(0, length(xi)), 
     b::Vector{Float64} = zeros(0),
     Aeq::Matrix{Float64} = zeros(0, length(xi)),
     beq::Vector{Float64} = zeros(0),
-    maxIters = 50
+    maxIters = 50,
+    solverType::Vector = [Ipopt, NLopt],
+    solverAttributesLP = ("tol" => solverTolerance, "max_iter" => 1000),
+    solverAttributesQP = ("tol" => solverTolerance, "max_iter" => 1000, "algorithm" => :LD_MMA)
 )
     # Initialize system:
     k = 1                       # initial iteration value
@@ -215,35 +212,23 @@ function levelMethod(
     xkOld = zeros(n)             # xkOld for breaking condition 
 
     # Set up model 1 - linear program to minimize f^(xi):
-    model1 = Model(optimizer_with_attributes(  
-        Ipopt.Optimizer,
-        "tol" => TOLERANCE,       
-        "max_iter" => 1000
-        # "algorithm" => :LD_MMA
-        )
-    )     
-    set_silent(model1)
+    modelLP = Model(optimizer_with_attributes(solverType[1].Optimizer, solverAttributesLP...))     
+    set_silent(modelLP)
 
-    @variable(model1, lb[i] <= xn1[i = 1:n] <= ub[i])   # constraint (1)
-    @constraint(model1, A*xn1 .<= b)                    # constraint (2)
-    @constraint(model1, Aeq*xn1 .== beq)                # constraint (3)
-    @variable(model1, t)  
-    @objective(model1, Min, t)
+    @variable(modelLP, lb[i] <= xn1[i = 1:n] <= ub[i])   # constraint (1)
+    @constraint(modelLP, A*xn1 .<= b)                    # constraint (2)
+    @constraint(modelLP, Aeq*xn1 .== beq)                # constraint (3)
+    @variable(modelLP, t)  
+    @objective(modelLP, Min, t)
 
     # Set up model 2 - quadratic program to minimize Euclidean projection:
-    model2 = Model(optimizer_with_attributes(  
-        NLopt.Optimizer,
-        "tol" => TOLERANCE,
-        "max_iter" => 1000,
-        "algorithm" => :LD_MMA
-        )
-    )
-    set_silent(model2)
+    modelQP = Model(optimizer_with_attributes(solverType[2].Optimizer, solverAttributesQP...))
+    set_silent(modelQP)
 
-    @variable(model2, lb[i] <= xn12[i = 1:n] <= ub[i])  # constraint (1)
-    @constraint(model2, con2, A*xn12 .<= b)             # constraint (2)
-    @constraint(model2, con3, Aeq*xn12 .== beq)         # constraint (3)
-    @objective(model2, Min, sum((xn12 .- xi).^2)) 
+    @variable(modelQP, lb[i] <= xn12[i = 1:n] <= ub[i])  # constraint (1)
+    @constraint(modelQP, con2, A*xn12 .<= b)             # constraint (2)
+    @constraint(modelQP, con3, Aeq*xn12 .== beq)         # constraint (3)
+    @objective(modelQP, Min, sum((xn12 .- xi).^2)) 
 
     # Loop through to iteratively solve models and add new constraints: 
     while any(stopCondition >= epsilon)    
@@ -254,24 +239,22 @@ function levelMethod(
         fxi, gxi = eval_gen_gradient(f, xi)     
 
         # Calculate fk^(xi) from MODEL 1:
-        @constraint(model1, fxi + gxi'*(xn1 - xi) <= t)      
-        JuMP.optimize!(model1)
+        @constraint(modelLP, fxi + gxi'*(xn1 - xi) <= t)      
+        JuMP.optimize!(modelLP)
         
         # pull optimal values for iteration:
-        xk = value.(model1[:xn1])
-        fHxk = value(model1[:t])       # req (1) for stopCondition
+        xk = value.(modelLP[:xn1])
+        fHxk = value(modelLP[:t])       # req (1) for stopCondition
         fStarxk = f(xk)                # req (2) for stopCondition
 
         # Calculate x(i+1) from MODEL 2:
-        @constraint(model2, fxi + gxi'*(xn12 - xi) <= (1-alpha)*fHxk + alpha*fStarxk)       #TODO: Potentially HERE
-        JuMP.optimize!(model2)
-        xi = value.(model2[:xn12])   
+        @constraint(modelQP, fxi + gxi'*(xn12 - xi) <= (1-alpha)*fHxk + alpha*fStarxk)     
+        JuMP.optimize!(modelQP)
+        xi = value.(modelQP[:xn12])   
 
         # Update stopping condition:
-        stopCondition = abs(fStarxk - fHxk)     #TODO: Potentially here
-
-        print((xk, xi, abs(fStarxk - fHxk), abs(fxi - fHxk)), "\n")    #TODO: Delete
-        
+        stopCondition = abs(fStarxk - fHxk)   
+       
         # Set breaking condition on maximum iterations:
         k = k + 1
         if k == maxIters

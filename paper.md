@@ -5,7 +5,7 @@ tags:
 - Nonsmooth Optimization
 authors:
  - name: Kamil A. Khan
-   orcid: 0000-0000-0000-0000
+   orcid: 0000-0003-4151-4326
    equal-contrib: true
    affiliation: "1, 2"
  - name: Maha Chaudhry
@@ -20,7 +20,7 @@ bibliography: paper.bib
 
 # Summary
 
-Mathematically, non-smooth functions are those that are not infinitely continuously differentiable. Since classical optimization assumes certain differentiability conditions, it becomes impractical to apply to non-smooth optimization problems. It can often be infeasible to exhaust all potential solutions, especially given that discontinuities may produce multiple feasible regions. Non-smooth analysis techniques were designed to handle concerns surrounding differentiation and allow for applications of more classical optimizations. [Griewank1994ADD]
+Mathematically, non-smooth functions are those that are not infinitely continuously differentiable. Since classical optimization assumes certain differentiability conditions, it becomes impractical to apply to non-smooth optimization problems. It can often be infeasible to exhaust all potential solutions, especially given that discontinuities may produce multiple feasible regions. Non-smooth analysis techniques were designed to handle concerns surrounding differentiation and allow for applications of more classical optimizations [@Griewank1994ADD] @Griewank1994ADD. 
 
 # Statement of need
 

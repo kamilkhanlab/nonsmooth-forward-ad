@@ -1,7 +1,7 @@
 #=
 module NonsmoothFwdAD
 =====================
-A quick implementation of:
+A straightforward implementation of:
 
 - the vector forward mode of automatic differentiation (AD) for generalized
   derivative evaluation, developed in the article:
@@ -250,28 +250,17 @@ end
 
 ## define generalized differentiation rules for the simplest elemental operations
 
-# macro to define (::AFloat, ::Float64) and (::Float64, ::AFloat) variants
-# of a defined bivariate operation(::AFloat, ::AFloat).
-macro define_mixed_input_variants(op)
-    return quote
-        Base.$op(uA::AFloat, uB::Float64) = $op(promote(uA, uB)...)
-        Base.$op(uA::Float64, uB::AFloat) = $op(promote(uA, uB)...)
-    end
-end
-
 # addition
 function Base.:+(uA::AFloat, uB::AFloat)
     vVal = uA.val + uB.val
     vDot = uA.dot + uB.dot
     return AFloat(vVal, vDot, uA.ztol)
 end
-@define_mixed_input_variants +
 
 # negative and subtraction
 Base.:-(u::AFloat) = AFloat(-u.val, -u.dot, u.ztol)
 
 Base.:-(uA::AFloat, uB::AFloat) = uA + (-uB)
-@define_mixed_input_variants -
 
 # multiplication
 function Base.:*(uA::AFloat, uB::AFloat)
@@ -279,7 +268,6 @@ function Base.:*(uA::AFloat, uB::AFloat)
     vDot = (uB.val * uA.dot) + (uA.val * uB.dot)
     return AFloat(vVal, vDot, uA.ztol)
 end
-@define_mixed_input_variants *
 
 # reciprocal and division
 function Base.inv(u::AFloat)
@@ -289,7 +277,6 @@ function Base.inv(u::AFloat)
 end
 
 Base.:/(uA::AFloat, uB::AFloat) = uA * inv(uB)
-@define_mixed_input_variants /
 
 # integer powers
 function Base.:^(u::AFloat, p::Int)
@@ -328,22 +315,20 @@ function Base.max(uA::AFloat, uB::AFloat)
     k = findfirst(!isapprox(0.0, atol=uA.ztol), diffVec)
 
     vVal = max(uA.val, uB.val)
-    vDot = isnothing(k) ? zeros(2) :
+    vDot = isnothing(k) ? zeros(length(uA.dot)) :
         (diffVec[k] > 0.0 ? uA.dot : uB.dot)
     return AFloat(vVal, vDot, uA.ztol)
 end
-@define_mixed_input_variants max
 
 function Base.min(uA::AFloat, uB::AFloat)
     diffVec = [uA.val - uB.val; uA.dot - uB.dot] 
     k = findfirst(!isapprox(0.0, atol=uA.ztol), diffVec)
 
     vVal = min(uA.val, uB.val)
-    vDot = isnothing(k) ? zeros(2) :
+    vDot = isnothing(k) ? zeros(length(uA.dot)) :
         (diffVec[k] < 0.0 ? uA.dot : uB.dot)
     return AFloat(vVal, vDot, uA.ztol)
 end
-@define_mixed_input_variants min
 
 # sqrt(uA^2 + uB^2); this is LinearAlgebra.hypot in Julia.
 # uA.ztol is used as in abs(::AFloat)
@@ -358,20 +343,26 @@ function Base.hypot(uA::AFloat, uB::AFloat)
     vDot = s[1] * uA.dot + s[2] * uB.dot
     return AFloat(vVal, vDot, uA.ztol)
 end
-@define_mixed_input_variants hypot
 
 ## overload comparisons to permit simple if-statements, but these conditions' values
 ## should not change under small perturbations in inputs.
 Base.:<(uA::AFloat, uB::AFloat) = (uA.val < uB.val)
-@define_mixed_input_variants <
 
 Base.:>(uA::AFloat, uB::AFloat) = (uA.val > uB.val)
-@define_mixed_input_variants >
-
-Base.:>=(uA::AFloat, uB::AFloat) = (uA.val >= uB.val)
-@define_mixed_input_variants >=
 
 Base.:<=(uA::AFloat, uB::AFloat) = (uA.val <= uB.val)
-@define_mixed_input_variants <=
+
+Base.:>=(uA::AFloat, uB::AFloat) = (uA.val >= uB.val)
+
+# define (::AFloat, ::Float64) and (::Float64, ::AFloat) variants
+# of a defined bivariate operation(::AFloat, ::AFloat).
+const binaryOpList = [:+, :-, :*, :/, :max, :min, :hypot, :<, :>, :(<=), :(>=)]
+
+for op in binaryOpList
+    @eval begin
+        Base.$op(uA::AFloat, uB::Float64) = $op(promote(uA, uB)...)
+        Base.$op(uA::Float64, uB::AFloat) = $op(promote(uA, uB)...)
+    end
+end
 
 end # module
